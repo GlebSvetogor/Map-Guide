@@ -32,6 +32,50 @@ namespace ConsoleApp2
 
         }
 
+        public static int Branch(int[,] matrix)
+        {
+            int n = matrix.GetLength(0);
+            int[] visited = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                visited[i] = 1 << i;
+            }
+            int[,] memo = new int[n, 1 << n];
+            int[] path = new int[n + 1];
+            path[0] = 0;
+            TSPHelper(matrix, visited, memo, 0, 1, path, 1);
+            return memo[0, 1];
+        }
+
+        public static int BranchHelper(int[,] matrix, int[] visited, int[,] memo, int current, int mask, int[] path, int index)
+        {
+            if (mask == (1 << visited.Length) - 1)
+            {
+                return matrix[current, 0];
+            }
+            if (memo[current, mask] > 0)
+            {
+                return memo[current, mask];
+            }
+            int min = int.MaxValue;
+            int next = -1;
+            for (int i = 0; i < visited.Length; i++)
+            {
+                if ((mask & visited[i]) == 0)
+                {
+                    int cost = matrix[current, i] + TSPHelper(matrix, visited, memo, i, mask | visited[i], path, index + 1);
+                    if (cost < min)
+                    {
+                        min = cost;
+                        next = i;
+                    }
+                }
+            }
+            memo[current, mask] = min;
+            path[index] = next;
+            return min;
+        }
+
         public static int[] NearestNeighbor(int[,] matrix)
         {
             int n = matrix.GetLength(0);
