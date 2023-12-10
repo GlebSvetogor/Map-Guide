@@ -39,6 +39,16 @@
       "frameworks": {
         "netcoreapp3.1": {
           "targetAlias": "netcoreapp3.1",
+          "dependencies": {
+            "System.Net.Http": {
+              "target": "Package",
+              "version": "[4.3.4, )"
+            },
+            "Telegram.Bot": {
+              "target": "Package",
+              "version": "[19.0.0, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
