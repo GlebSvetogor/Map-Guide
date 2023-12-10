@@ -11,11 +11,17 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Net.Http;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace ConsoleApp2
 {
     internal class Program
     {
+        static List<string> userInput = new List<string>();
         static List<string> cities = new List<string>();
         static bool inputCities = false;
 
@@ -51,13 +57,17 @@ namespace ConsoleApp2
                     default:
                         if (inputCities)
                         {
-                            cities.AddRange(message.Text.Trim().Split(','));
+                            userInput.AddRange(message.Text.Trim().Split(','));
                             inputCities = false;
-                            await botClient.SendTextMessageAsync(chatId, "Ты ввел следующие города:");
+                            foreach (string el in userInput)
+                            {
+                                await IsCityAsync(el, botClient, chatId);
+                            }
                             foreach (string city in cities)
                             {
-                                await botClient.SendTextMessageAsync(chatId, city);
+                                Console.WriteLine(city);
                             }
+
                         }
                         else
                         {
@@ -71,34 +81,33 @@ namespace ConsoleApp2
             }
         }
 
-        private static async Task IsCityAsync(string city)
+        private static async Task IsCityAsync(string city, ITelegramBotClient botClient, long chatId)
         {
-
-            using (var client = new HttpClient())
+            string username = "demo654";
+            string url = $"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username={username}&featureClass=P";
+            using (HttpClient client = new HttpClient())
             {
-                var response = await client.GetAsync($"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username=demo");
-                var result = ReadContentAsStringAsync(response);
-                if (GetTotalResultCountAsync(result) > 0)
+                HttpResponseMessage response = await client.GetAsync($"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username={username}");
+                response.EnsureSuccessStatusCode();
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(responseBody);
+                JObject json = JObject.Parse(responseBody);
+                int totalResultsCount = (int)json["totalResultsCount"];
+
+                JArray geonames = (JArray)json["geonames"];
+                string adminCode1 = (string)geonames[0]["adminCode1"];
+
+                if (totalResultsCount > 0 && adminCode1 != "00")
                 {
                     Console.WriteLine($"{city} является городом.");
+                    cities.Add(city);
                 }
                 else
                 {
                     Console.WriteLine($"{city} не является городом.");
+                    await botClient.SendTextMessageAsync(chatId, $"{city} не является городом.");
                 }
             }
-        }
-
-        public static async Task<int> GetTotalResultCountAsync(HttpResponseMessage response)
-        {
-            string content = await response.Content.ReadAsStringAsync();
-            GeoNamesResponse data = JsonConvert.DeserializeObject<GeoNamesResponse>(content);
-            return data.totalResultsCount;
-        }
-
-        public static async Task<string> ReadContentAsStringAsync(HttpResponseMessage response)
-        {
-            return await response.Content.ReadAsStringAsync();
         }
 
         private static Task Error(ITelegramBotClient client, Exception exception, CancellationToken token)
@@ -107,10 +116,6 @@ namespace ConsoleApp2
         }
     }
 
-    public class GeoNamesResponse
-    {
-        public int totalResultsCount { get; set; }
-    }
 }
         
             
