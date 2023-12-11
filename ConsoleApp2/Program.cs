@@ -23,7 +23,10 @@ namespace ConsoleApp2
     {
         static List<string> userInput = new List<string>();
         static List<string> cities = new List<string>();
+        static List<int> indexPath = new List<int>();
+        static List<string> path = new List<string>();
         static bool inputCities = false;
+        static string username = "demo654";
 
         static void Main(string[] args)
         {
@@ -64,29 +67,37 @@ namespace ConsoleApp2
                                 await IsCityAsync(el, botClient, chatId);
                             }
 
-                            int[,] distance = new int[cities.Count, cities.Count];
+                            int[,] distanceBetweenCities = new int[cities.Count, cities.Count];
                             for (int i = 0; i < cities.Count; i++)
                             {
                                 for (int j = 0; j < cities.Count; j++)
                                 {
                                     if (i == j)
                                     {
-                                        distance[i, j] = 0;
+                                        distanceBetweenCities[i, j] = 0;
                                         continue;
                                     }
-                                    DistanceBetweenCities(cities[i], cities[j], botClient,chatId);
+                                    distanceBetweenCities[i,j] = await DistanceBetweenCities(cities[i], cities[j], botClient,chatId);
+
+                                }
+                            }
+                            Console.WriteLine("Output from distance matric:");
+
+                            for (int i = 0; i < cities.Count; i++)
+                            {
+                                for (int j = 0; j < cities.Count; j++)
+                                {
+                                    Console.WriteLine($"distance between {cities[i]} and {cities[j]} = {distanceBetweenCities[i, j]}");
                                 }
                             }
 
-                            //for (int i = 0; i < cities.Count; i++)
-                            //{
-                            //    for (int j = 0; j < cities.Count; j++)
-                            //    {
+                            int minCost = MinimumSpanningTree(distanceBetweenCities);
 
-                            //        Console.WriteLine(distance[i, j]);
-                            //    }
-                            //}
-
+                            for (int i = 0; i < indexPath.Count; i++)
+                            {
+                                Console.WriteLine(indexPath[i]);
+                            }
+                            Console.WriteLine($"mincost = {minCost}");
                         }
                         else
                         {
@@ -102,7 +113,6 @@ namespace ConsoleApp2
 
         private static async Task IsCityAsync(string city, ITelegramBotClient botClient, long chatId)
         {
-            string username = "demo654";
             string url = $"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username={username}&featureClass=P";
             using (HttpClient client = new HttpClient())
             {
@@ -114,7 +124,7 @@ namespace ConsoleApp2
                 int totalResultsCount = (int)json["totalResultsCount"];
 
                 JArray geonames = (JArray)json["geonames"];
-                string adminCode1 = (string)geonames[0]["adminCode1"];
+                string adminCode1 = geonames.Count() == 0 ? "00" : (string)geonames[0]["adminCode1"];
 
                 if (totalResultsCount > 0 && adminCode1 != "00")
                 {
@@ -128,10 +138,8 @@ namespace ConsoleApp2
                 }
             }
         }
-
-        private static async Task DistanceBetweenCities(string city1, string city2, ITelegramBotClient botClient, long chatId)
+        private static async Task<int> DistanceBetweenCities(string city1, string city2, ITelegramBotClient botClient, long chatId)
         {
-            string username = "demo654";
             string url1 = $"http://api.geonames.org/searchJSON?q={city1}&maxRows=1&username={username}&featureClass=P";
             string url2 = $"http://api.geonames.org/searchJSON?q={city2}&maxRows=1&username={username}&featureClass=P";
 
@@ -152,10 +160,9 @@ namespace ConsoleApp2
                 double lon1 = (double)geonames1[0]["lng"];
                 double lat2 = (double)geonames2[0]["lat"];
                 double lon2 = (double)geonames2[0]["lng"];
+                int distance = (int)Distance(lat1, lon1, lat2, lon2);
 
-                double distance = Distance(lat1, lon1, lat2, lon2);
-                
-                Console.WriteLine($"Расстояние между {city1} и {city2} составляет {distance} км.");
+                return distance;
             }
 
         }
@@ -178,6 +185,73 @@ namespace ConsoleApp2
         private static double Deg2Rad(double deg)
         {
             return deg * (Math.PI / 180);
+        }
+
+        public static int MinimumSpanningTree(int[,] graph)
+        {
+            int n = graph.GetLength(0);
+            int[] parent = new int[n];
+            int[] key = new int[n];
+            bool[] mstSet = new bool[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                key[i] = int.MaxValue;
+                mstSet[i] = false;
+            }
+
+            key[0] = 0;
+            parent[0] = -1;
+
+            for (int count = 0; count < n - 1; count++)
+            {
+                int u = MinKey(key, mstSet);
+                mstSet[u] = true;
+
+                for (int v = 0; v < n; v++)
+                {
+                    if (graph[u, v] != 0 && mstSet[v] == false && graph[u, v] < key[v])
+                    {
+                        parent[v] = u;
+                        key[v] = graph[u, v];
+                    }
+                }
+            }
+
+            
+
+            int cost = 0;
+            for (int i = 1; i < n; i++)
+            {
+                indexPath.Add(parent[i]);
+                cost += graph[i, parent[i]];
+            }
+            indexPath.Add(0);
+            cost += graph[0, parent[0]];
+            Console.WriteLine($"cost = {cost}");
+            for(int i = 1; i < indexPath.Count; i++)
+            {
+                Console.WriteLine(indexPath[i]);
+            }
+
+            return cost;
+        }
+
+        private static int MinKey(int[] key, bool[] mstSet)
+        {
+            int min = int.MaxValue;
+            int minIndex = -1;
+
+            for (int i = 0; i < key.Length; i++)
+            {
+                if (mstSet[i] == false && key[i] < min)
+                {
+                    min = key[i];
+                    minIndex = i;
+                }
+            }
+
+            return minIndex;
         }
 
         private static Task Error(ITelegramBotClient client, Exception exception, CancellationToken token)
