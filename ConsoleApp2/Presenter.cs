@@ -16,70 +16,128 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Exceptions;
 
 
 namespace ConsoleApp2
 {
 
-    internal class Presenter
+    class Presenter
     {
+        private static ITelegramBotClient _botClient;
+        private static ReceiverOptions _receiverOptions;
+        private static bool InputCities = false;
         static Model model = new Model();
-        static View view = new View();
-        static bool inputCities = false;
-        static void Main(string[] args)
-        {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.InputEncoding = System.Text.Encoding.UTF8;
-            view.client.StartReceiving(Update, Error);
-            Console.ReadLine();
-        }
 
-        async static Task Update(ITelegramBotClient botClient, Update update, CancellationToken token)
+        static async Task Main()
         {
-            var message = update.Message;
-            var chatId = message.Chat.Id;
-            switch (message.Text.ToLower())
+
+            _botClient = new TelegramBotClient("6414840375:AAHV2TVGdbGYuRZVgsKs3xkwplEsw1NANLQ");
+            _receiverOptions = new ReceiverOptions 
             {
-                case "/start":
-                    inputCities = true;
-                    await view.SendMessage(chatId, "Введите название городов через запятую:");
-                    break;
-                case "/help":
-                    await view.SendMessage(chatId, "Я могу помочь тебе найти оптимальный маршрут: " +
-                         "\n\n1. Введи команду /start чтобы начать работу." +
-                         "\n2. Напиши название каждого города." +
-                         "\n3. После того как ты перечислил все города,напиши команду /putRequires и выбери нужные тебе требования" +
-                         "\n4. Нажми на кнопку найти маршрут");
-                    break;
-                default:
-                    if (inputCities)
-                    {
-                        await view.SendMessage(chatId , model.CheckCities(message.Text));
-                        inputCities = false;
-                        model.CountDistanceBetweenCities();
-                        //int minCost = MinimumSpanningTree(distanceBetweenCities);
+                AllowedUpdates = new[] 
+                {
+                UpdateType.Message, 
+            },
+                ThrowPendingUpdates = true,
+            };
 
-                        //for (int i = 0; i < indexPath.Count; i++)
-                        //{
-                        //    Console.WriteLine(indexPath[i]);
-                        //}
-                        //Console.WriteLine($"mincost = {minCost}");
-                    }
-                    else
-                    {
-                        await view.SendMessage(chatId, "Привет! Я твой телеграм бот Map-Guid." +
-                            "\n\n1.Команда /help - для получения инструкции" +
-                            "\n2. Команда /start - чтобы начать работу.");
-                    }
-                    break;
+            using var cts = new CancellationTokenSource();
 
-            }
+            _botClient.StartReceiving(UpdateHandler, ErrorHandler, _receiverOptions, cts.Token); 
 
+            var me = await _botClient.GetMeAsync(); 
+            Console.WriteLine($"{me.FirstName} запущен!");
+
+            await Task.Delay(-1);
         }
 
-        private static Task Error(ITelegramBotClient client, Exception exception, CancellationToken token)
+        private static async Task UpdateHandler(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // Сразу же ставим конструкцию switch, чтобы обрабатывать приходящие Update
+                switch (update.Type)
+                {
+                    case UpdateType.Message:
+                        {
+                            // эта переменная будет содержать в себе все связанное с сообщениями
+                            var message = update.Message;
+
+                            // From - это от кого пришло сообщение
+                            var user = message.From;
+
+                            // Chat - содержит всю информацию о чате
+                            var chat = message.Chat;
+
+                            // Добавляем проверку на тип Message
+                            switch (message.Type)
+                            {
+                                // Тут понятно, текстовый тип
+                                case MessageType.Text:
+                                    {
+                                        // тут обрабатываем команду /start, остальные аналогично
+                                        if (message.Text == "/start")
+                                        {
+                                            InputCities = true;
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Введи названия городов");
+                                            return;
+                                        }
+
+                                        if(message.Text == "/help")
+                                        {
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Спомощью этой инструкции ты сможешь найти оптимальный маршрут:\n" +
+                                                "1. Введите команду /start для ввода названия городов" +
+                                                "2. Выберите алгоритм нахождения оптимального маршрута"
+                                            );
+                                            return;
+                                        }
+
+                                        if (InputCities)
+                                        {
+                                            InputCities = false;
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                model.CheckCities(message.Text)
+                                            );
+                                        }
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            "Используй только текст!");
+                                        return;
+                                    }
+                            }
+                            break;
+                        }
+                    }
+                }
+            
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private static Task ErrorHandler(ITelegramBotClient botClient, Exception error, CancellationToken cancellationToken)
+        {
+            var ErrorMessage = error switch
+            {
+                ApiRequestException apiRequestException
+                    => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
+                _ => error.ToString()
+            };
+
+            Console.WriteLine(ErrorMessage);
+            return Task.CompletedTask;
         }
     }
 

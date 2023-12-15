@@ -48,3 +48,4 @@ C:\Users\user\Desktop\tmp\Map-Guide\ConsoleApp2\obj\Debug\netcoreapp3.1\ConsoleA
 C:\Users\user\Desktop\tmp\Map-Guide\ConsoleApp2\obj\Debug\netcoreapp3.1\ConsoleApp2.dll
 C:\Users\user\Desktop\tmp\Map-Guide\ConsoleApp2\obj\Debug\netcoreapp3.1\ConsoleApp2.pdb
 C:\Users\user\Desktop\tmp\Map-Guide\ConsoleApp2\obj\Debug\netcoreapp3.1\ConsoleApp2.genruntimeconfig.cache
+C:\Users\User\Desktop\tmp\Map-Guide\ConsoleApp2\obj\Debug\netcoreapp3.1\ConsoleApp2.sourcelink.json

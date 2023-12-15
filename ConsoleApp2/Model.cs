@@ -33,35 +33,54 @@ namespace ConsoleApp2
             return response;
         }
 
-        private static async Task<string> IsCityAsync(string city)
+        public static async Task<string> IsCityAsync(string city)
         {
-            string GeonamesUrl = $"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username={username}&featureClass=P";
+            string url = $"http://api.geonames.org/search?q={city}&maxRows=1&username=yourusername";
             using (HttpClient client = new HttpClient())
             {
-                HttpResponseMessage response = await client.GetAsync(GeonamesUrl);
-                response.EnsureSuccessStatusCode();
-                string responseBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(responseBody);
-                JObject json = JObject.Parse(responseBody);
-                int totalResultsCount = (int)json["totalResultsCount"];
-
-                JArray geonames = (JArray)json["geonames"];
-                string adminCode1 = geonames.Count() == 0 ? "00" : (string)geonames[0]["adminCode1"];
-                int population = geonames.Count() == 0 ? 0 : (int)geonames[0]["population"];
-
-                if (totalResultsCount > 0 && adminCode1 != "00" && population != 0)
+                HttpResponseMessage response = await client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"{city} является городом.");
-                    cities.Add(city);
-                    return null;
-                }
-                else
-                {
-                    Console.WriteLine($"{city} не является городом.");
-                    return $"{city} не является городом.";
+                    string result = await response.Content.ReadAsStringAsync();
+                    if (result.Contains("<fcode>PPL</fcode>"))
+                    {
+                        return $"{city} является городом"; ;
+                    }
+                    Console.WriteLine(result);
                 }
             }
+            return $"{city} не является городом";
         }
+
+        //private static async Task<string> IsCityAsync(string city)
+        //{
+        //    string GeonamesUrl = $"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username={username}&featureClass=P";
+        //    using (HttpClient client = new HttpClient())
+        //    {
+        //        HttpResponseMessage response = await client.GetAsync(GeonamesUrl);
+        //        response.EnsureSuccessStatusCode();
+        //        string responseBody = await response.Content.ReadAsStringAsync();
+        //        Console.WriteLine(responseBody);
+        //        JObject json = JObject.Parse(responseBody);
+        //        int totalResultsCount = (int)json["totalResultsCount"];
+
+        //        JArray geonames = (JArray)json["geonames"];
+        //        string adminCode1 = geonames.Count() == 0 ? "00" : (string)geonames[0]["adminCode1"];
+        //        int population = geonames.Count() == 0 ? 0 : (int)geonames[0]["population"];
+
+        //        if (totalResultsCount > 0 && adminCode1 != "00" && population != 0)
+        //        {
+        //            Console.WriteLine($"{city} является городом.");
+        //            cities.Add(city);
+        //            return null;
+        //        }
+        //        else
+        //        {
+        //            Console.WriteLine($"{city} не является городом.");
+        //            return $"{city} не является городом.";
+        //        }
+        //    }
+        //}
 
         public void CountDistanceBetweenCities()
         {
