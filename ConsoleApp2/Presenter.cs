@@ -28,6 +28,7 @@ namespace ConsoleApp2
         private static ITelegramBotClient _botClient;
         private static ReceiverOptions _receiverOptions;
         private static bool InputCities = false;
+        private static bool InilineKeyboard = false;
         static Model model = new Model();
 
         static async Task Main()
@@ -57,7 +58,6 @@ namespace ConsoleApp2
         {
             try
             {
-                // Сразу же ставим конструкцию switch, чтобы обрабатывать приходящие Update
                 switch (update.Type)
                 {
                     case UpdateType.Message:
@@ -83,7 +83,7 @@ namespace ConsoleApp2
                                             InputCities = true;
                                             await botClient.SendTextMessageAsync(
                                                 chat.Id,
-                                                "Введи названия городов");
+                                                "Введи названия городов через пробел");
                                             return;
                                         }
 
@@ -91,10 +91,32 @@ namespace ConsoleApp2
                                         {
                                             await botClient.SendTextMessageAsync(
                                                 chat.Id,
-                                                "Спомощью этой инструкции ты сможешь найти оптимальный маршрут:\n" +
-                                                "1. Введите команду /start для ввода названия городов" +
-                                                "2. Выберите алгоритм нахождения оптимального маршрута"
+                                                "С помощью этой инструкции ты сможешь найти оптимальный маршрут:\n" +
+                                                "1. Введи команду /start для ввода названий городов" +
+                                                "2. Выбери алгоритм нахождения оптимального маршрута"
                                             );
+                                            return;
+                                        }
+
+                                        if (message.Text == "Самый дешевый маршрут")
+                                        {
+                                            InilineKeyboard = false;
+
+                                            return;
+                                        }
+
+                                        if (message.Text == "Самый короткий маршрут")
+                                        {
+                                            InilineKeyboard = false;
+
+                                            return;
+                                        }
+
+                                        if (message.Text == "Оптимальный маршрут")
+                                        {
+                                            InilineKeyboard = false;
+
+
                                             return;
                                         }
 
@@ -105,7 +127,55 @@ namespace ConsoleApp2
                                                 chat.Id,
                                                 model.CheckCities(message.Text)
                                             );
+                                            InilineKeyboard = model.checkCitiesList;
+                                            if(InilineKeyboard != true)
+                                            {
+                                                await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Необходимо минимум 3 города, введите команду /start еще раз и заполните больше городов"
+                                                );
+                                                model.ClearFields();
+                                            }
+                                            await model.CountDistanceBetweenCities();
                                         }
+
+                                        if (InilineKeyboard == true)
+                                        {
+                                            var replyKeyboard = new ReplyKeyboardMarkup(
+                                                new List<KeyboardButton[]>()
+                                                {
+                                                    new KeyboardButton[]
+                                                    {
+                                                        new KeyboardButton("Самый дешевый маршрут")
+                                                    },
+                                                    new KeyboardButton[]
+                                                    {
+                                                        new KeyboardButton("Самый короткий маршрут")
+                                                    },
+                                                    new KeyboardButton[]
+                                                    {
+                                                        new KeyboardButton("Оптимальный маршрут")
+                                                    }
+                                                })
+                                            {
+                                                // автоматическое изменение размера клавиатуры, если не стоит true,
+                                                // тогда клавиатура растягивается чуть ли не до луны,
+                                                // проверить можете сами
+                                                ResizeKeyboard = true,
+                                                OneTimeKeyboard = true
+                                            };
+
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Выберите условия нахождения маршрута",
+                                                replyMarkup: replyKeyboard); // опять передаем клавиатуру в параметр replyMarkup
+
+                                            return;
+
+                                        }
+
+                                      
+
                                         break;
                                     }
                                 default:
@@ -118,8 +188,13 @@ namespace ConsoleApp2
                             }
                             break;
                         }
-                    }
+                    case UpdateType.InlineQuery:
+                        {
+
+                            break;
+                        }
                 }
+            }
             
             catch (Exception ex)
             {
