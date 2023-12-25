@@ -29,14 +29,13 @@ namespace ConsoleApp2
     {
         private static ITelegramBotClient _botClient;
         private static ReceiverOptions _receiverOptions;
+        private static AlgorithmCreator _algorithmCreator;
+        private static MatrixCreator matrixCreator;
         private static bool InputCities = false;
-        private static bool InilineKeyboard = false;
-        static HomeModel model;
-        static InputValidator validator;
+        private static bool InlineKeyaboard = false;
 
         static async Task Main()
         {
-
             _botClient = new TelegramBotClient("6414840375:AAHV2TVGdbGYuRZVgsKs3xkwplEsw1NANLQ");
             _receiverOptions = new ReceiverOptions
             {
@@ -46,8 +45,7 @@ namespace ConsoleApp2
                 },
                 ThrowPendingUpdates = true,
             };
-            model = new HomeModel();
-            validator = new InputValidator();
+
 
             using var cts = new CancellationTokenSource();
 
@@ -91,30 +89,35 @@ namespace ConsoleApp2
                                             await botClient.SendTextMessageAsync(
                                                 chat.Id,
                                                 "С помощью этой инструкции ты сможешь найти оптимальный маршрут:\n" +
-                                                "1. Введи команду /start для ввода названий городов" +
+                                                "1. Введи команду /start для ввода названий городов\n" +
                                                 "2. Выбери алгоритм нахождения оптимального маршрута"
                                             );
                                             return;
                                         }
 
-                                        if (message.Text == "Самый дешевый маршрут")
+                                        if (message.Text == "Самый быстрый маршрут")
                                         {
-                                            InilineKeyboard = false;
-
+                                            InlineKeyaboard = false;
+                                            Console.WriteLine("Это самый быстрый маршрут ...");
+                                            
                                             return;
                                         }
 
                                         if (message.Text == "Самый короткий маршрут")
                                         {
-                                            InilineKeyboard = false;
-
+                                            InlineKeyaboard = false;
+                                            Console.WriteLine("Это самый короткий маршрут ...");
+                                            matrixCreator = new DistanceMatrixCreator();
+                                            Matrix matrix = matrixCreator.CreateMatrix();
+                                            matrix.Count(InputValidator.cities);
                                             return;
                                         }
 
                                         if (message.Text == "Оптимальный маршрут")
                                         {
-                                            InilineKeyboard = false;
-
+                                            InlineKeyaboard = false;
+                                            Console.WriteLine("Это самый оптимальный маршрут ...");
+                                            //_algorithmCreator = new ShortestAlgorithmCreator();
                                             return;
                                         }
 
@@ -123,21 +126,25 @@ namespace ConsoleApp2
                                             InputCities = false;
                                             await botClient.SendTextMessageAsync(
                                                 chat.Id,
-                                                validator.CheckCities(message.Text) ?? "Все хорошо"
+                                                "Сейчас проверю что ты там отправил ..."
                                             );
-                                            InilineKeyboard = validator.checkCitiesListLength;
-                                            if(InilineKeyboard != true)
+
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                await InputValidator.CheckCities(message.Text)
+                                            );
+
+                                            InlineKeyaboard = InputValidator.checkCitiesListLength();
+                                            if (!InlineKeyaboard)
                                             {
                                                 await botClient.SendTextMessageAsync(
                                                 chat.Id,
-                                                "Необходимо минимум 3 города, введите команду /start еще раз и заполните больше городов"
+                                                "Необходимо минимум 3 города для нахождения маршрута, введи команду /start еще раз и заполни больше городов"
                                                 );
                                             }
-                                        }
-
-                                        if (InilineKeyboard == true)
-                                        {
-                                            var replyKeyboard = new ReplyKeyboardMarkup(
+                                            else
+                                            {
+                                                var replyKeyboard = new ReplyKeyboardMarkup(
                                                 new List<KeyboardButton[]>()
                                                 {
                                                     new KeyboardButton[]
@@ -153,21 +160,25 @@ namespace ConsoleApp2
                                                         new KeyboardButton("Оптимальный маршрут")
                                                     }
                                                 })
-                                            {
-                                                ResizeKeyboard = true,
-                                                OneTimeKeyboard = true
-                                            };
+                                                {
+                                                    ResizeKeyboard = true,
+                                                    OneTimeKeyboard = true
+                                                };
 
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Выберите условия нахождения маршрута",
-                                                replyMarkup: replyKeyboard); 
+                                                await botClient.SendTextMessageAsync(
+                                                    chat.Id,
+                                                    "Выбери условие нахождения маршрута",
+                                                    replyMarkup: replyKeyboard);
 
-                                            return;
-
+                                                return;
+                                            }
                                         }
 
-                                      
+                                        if (InlineKeyaboard)
+                                        {
+                                            await botClient.SendTextMessageAsync(chat.Id, "Ошибка ввода ! \n" +
+                                                "Выбери условие нахождения маршрута с помощью inline клавиатуры ...");
+                                        }
 
                                         break;
                                     }
@@ -185,13 +196,10 @@ namespace ConsoleApp2
                         }// case (UpdateType.Message)
                     case UpdateType.InlineQuery:
                         {
-
                             break;
                         }
                 }// case (UpdateType = message)
-            }
-            
-            catch (Exception ex)
+            }catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }
@@ -210,57 +218,36 @@ namespace ConsoleApp2
         }
     }
 
-    class InputValidator
+    static class InputValidator
     {
-        static APIRequest request;
-        static string username = "demo654";
-        public InputValidator() 
-        {
-            request = new APIRequest();
-        }
+        private static string username = "demo654";
+        private static StringBuilder response;
+        public static List<string> cities = new List<string>();
 
-        public static List<string> cities 
+        public static async Task<string> CheckCities(string mes)
         {
-            get
-            {
-                return cities;
-            }
-        }
-            
-        public bool checkCitiesListLength
-        {
-            get
-            {
-                return cities.Count >= 3 ? true : false;
-            }
-        }
-
-        public string CheckCities(string mes)
-        {
-            List<string> userCitiesInput = new List<string>();
-            userCitiesInput.AddRange(mes.Trim().Split(' '));
+            List<string> userInputCities = new List<string>();
+            userInputCities.AddRange(mes.Trim().Split(' '));
             var response = new StringBuilder();
-            foreach (string city in userCitiesInput)
+            foreach (string city in userInputCities)
             {
-                string url = $"http://api.geonames.org/searchJSON?q={city}&maxRows=1&username={username}&featureClass=P&featureCode=PPL&isNameRequired=true";
-                string responseBody = Convert.ToString(request.MakeRequest(url));
-                JObject json = JObject.Parse(responseBody);
+                JObject json = await APIRequest.MakeRequest(city);
                 int totalResultsCount = (int)json["totalResultsCount"];
-                Console.WriteLine(responseBody);
 
                 if (totalResultsCount > 1)
                 {
                     cities.Add(city);
+                    response.Append($"{city} является городом" + "\n");
                 }
                 else
                 {
-                    response.Append($"{city} не является городом");
+                    response.Append($"{city} не является городом" + "\n");
                 }
             }
+
             return response.ToString();
         }
-
-
+        public static bool checkCitiesListLength() => cities.Count >= 3 ? true : false;
     }
 
 }
