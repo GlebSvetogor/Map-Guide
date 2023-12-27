@@ -13,12 +13,12 @@ using Newtonsoft.Json;
 
 namespace ConsoleApp2
 {
-    static class HomeModel
+    class HomeModel
     {
 
     }
 
-    static class APIRequest
+    class APIRequest
     {
         private static string username = "demo654";
 

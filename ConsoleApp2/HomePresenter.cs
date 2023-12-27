@@ -218,12 +218,9 @@ namespace ConsoleApp2
         }
     }
 
-    static class InputValidator
+    class InputValidator
     {
-        private static string username = "demo654";
-        private static StringBuilder response;
         public static List<string> cities = new List<string>();
-
         public static async Task<string> CheckCities(string mes)
         {
             List<string> userInputCities = new List<string>();
