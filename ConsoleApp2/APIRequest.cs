@@ -11,7 +11,7 @@ namespace ConsoleApp2
     internal class APIRequest
     {
         private static string geonamesUsername = "demo654";
-        private static string twoGisApiKey = "00419301-8df8-46e6-83f1-83cd25e7a8c1";
+        private static string _2GisApiKey = "00419301-8df8-46e6-83f1-83cd25e7a8c1";
 
         public static async Task<JObject> MakeCityRequest(string city)
         {
@@ -28,7 +28,7 @@ namespace ConsoleApp2
 
         public static async Task<string> MakeCoordinateRequest(string city)
         {
-            string url = $"https://catalog.api.2gis.com/3.0/items?&q={city}&fields=items.geometry.centroid&key={twoGisApiKey}"; // URL-адрес запроса
+            string url = $"https://catalog.api.2gis.com/3.0/items?&q={city}&fields=items.geometry.centroid&key={_2GisApiKey}"; // URL-адрес запроса
             string regex = @"POINT\((\d+\.\d+) (\d+\.\d+)\)";
             using (HttpClient client = new HttpClient())
             {
@@ -80,7 +80,6 @@ namespace ConsoleApp2
                     string apiResponse = await response.Content.ReadAsStringAsync();
                     JObject jsonResponse = JObject.Parse(apiResponse);
                     int duration = (int)jsonResponse["routes"][0]["duration"] / 3600;
-                    Console.WriteLine($"Общее время на прохождение маршрута: **{duration:N2}");
                     return duration;
                 }
             }

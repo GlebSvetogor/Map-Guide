@@ -12,7 +12,7 @@ namespace ConsoleApp2
         static int[,] input_matrix;
         static int[] path;
         static bool[] visited;
-        static int best_len = INF;
+        static int best_len;
         static int[] best_path;
 
         static void BranchAndBound(int cur, int len)
@@ -52,7 +52,7 @@ namespace ConsoleApp2
             path = new int[n];
             visited = new bool[n];
             best_path = new int[n];
-
+            best_len = INF;
 
             for (int i = 0; i < n; i++)
             {
@@ -66,7 +66,7 @@ namespace ConsoleApp2
             path[0] = 0;
             BranchAndBound(1, 0);
             var result = new Tuple<int[], int>(best_path, best_len);
-
+            
             return result;
         }
     }
