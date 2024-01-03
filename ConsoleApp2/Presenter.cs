@@ -15,12 +15,10 @@ using System.Text;
 
 namespace ConsoleApp2
 {
-
-    class HomePresenter
+    class Presenter
     {
         private static ITelegramBotClient _botClient;
         private static ReceiverOptions _receiverOptions;
-        private static AlgorithmCreator _algorithmCreator;
         private static MatrixCreator matrixCreator;
         private static bool InputCities = false;
         private static bool InlineKeyaboard = false;
@@ -96,8 +94,33 @@ namespace ConsoleApp2
                                         {
                                             InlineKeyaboard = false;
                                             Console.WriteLine("Это самый быстрый маршрут ...");
-                                            
-                                            return;
+
+                                            CoordinateMatrix coordinateMatrix = new CoordinateMatrix();
+
+                                            matrixCreator = new TimeMatrixCreator();
+                                            Matrix matrix = matrixCreator.CreateMatrix();
+
+                                            var TimeMatrix = matrix.Count(await coordinateMatrix.Count(InputValidator.cities));
+
+                                            Console.WriteLine("TimeMatrix:");
+
+                                            for (int i = 0; i < TimeMatrix.GetLength(0); i++)
+                                            {
+                                                for (int j = 0; j < TimeMatrix.GetLength(0); j++)
+                                                {
+                                                    Console.WriteLine(TimeMatrix[i, j] + "    ");
+                                                }
+                                                Console.WriteLine("\n");
+                                            }
+                                            var result = TSP.Start(TimeMatrix);
+
+                                            Console.WriteLine("Самый быстрый путь займет: " + result.Item2);
+                                            Console.Write("Маршрут: ");
+                                            for (int i = 0; i < TimeMatrix.GetLength(0); i++)
+                                            {
+                                                Console.Write(InputValidator.cities[result.Item1[i]] + " ");
+                                            }
+
                                         }
 
                                         if (message.Text == "Самый короткий маршрут")
@@ -112,17 +135,28 @@ namespace ConsoleApp2
 
                                             var distanceMatrix = matrix.Count(await coordinateMatrix.Count(InputValidator.cities));
 
-                                            _algorithmCreator = new ShortestAlgorithmCreator();
-                                            Algorithm algorithm = _algorithmCreator.CreateAlgorithm();
-                                            var algorithmResult = algorithm.FindRoute(distanceMatrix);
-                                            foreach(var el in algorithmResult)
+                                            Console.WriteLine("distanceMatrix:");
+
+                                            for(int i = 0; i< distanceMatrix.GetLength(0); i++)
                                             {
-                                                Console.WriteLine($"{el}");
+                                                for(int j = 0; j < distanceMatrix.GetLength(0); j++)
+                                                {
+                                                    Console.WriteLine(distanceMatrix[i, j] + "    ");
+                                                }
+                                                Console.WriteLine("\n");
                                             }
-                                            
+                                            var result = TSP.Start(distanceMatrix);
+
+                                            Console.WriteLine("Кратчайший путь: " + result.Item2);
+                                            Console.Write("Маршрут: ");
+                                            for (int i = 0; i < distanceMatrix.GetLength(0); i++)
+                                            {
+                                                Console.Write(InputValidator.cities[result.Item1[i]] + " ");
+                                            }
+
                                         } 
 
-                                        if (message.Text == "Оптимальный маршрут")
+                                        if (message.Text == "Настраиваемый маршрут")
                                         {
                                             InlineKeyaboard = false;
                                             Console.WriteLine("Это самый оптимальный маршрут ...");
@@ -171,7 +205,7 @@ namespace ConsoleApp2
                                                 {
                                                     new KeyboardButton[]
                                                     {
-                                                        new KeyboardButton("Самый дешевый маршрут")
+                                                        new KeyboardButton("Самый быстрый маршрут")
                                                     },
                                                     new KeyboardButton[]
                                                     {
@@ -179,7 +213,7 @@ namespace ConsoleApp2
                                                     },
                                                     new KeyboardButton[]
                                                     {
-                                                        new KeyboardButton("Оптимальный маршрут")
+                                                        new KeyboardButton("Настраиваемый маршрут")
                                                     }
                                                 })
                                                 {
@@ -251,11 +285,11 @@ namespace ConsoleApp2
                 {
                     string responseBody = await response.Content.ReadAsStringAsync();
                     JObject json = JObject.Parse(responseBody);
-
+                    Console.WriteLine(json);
                     if ((int)json["meta"]["code"] == 200)
                     {
-                        JArray items = (JArray)(json["result"]["items"]);
-                        if ((string)items[0]["subtype"] == "city")
+                        //JArray items = (JArray)(json["result"]["items"]);
+                        if ((int)json["result"]["total"] >= 1)
                         {
                             cities.Add(cityName);
                             Console.WriteLine($"{cityName} является городом");

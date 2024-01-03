@@ -10,15 +10,15 @@ namespace ConsoleApp2
 {
     abstract class Matrix
     {
-        public double[,] matrix;
-        public abstract double[,] Count(string[] citiesCoordinates);
+        public int[,] matrix;
+        public abstract int[,] Count(string[] citiesCoordinates);
     }
 
     class DistanceMatrix : Matrix
     {
-        public override double[,] Count(string[] citiesCoordinates)
+        public override int[,] Count(string[] citiesCoordinates)
         {
-            matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
+            matrix = new int[citiesCoordinates.Count(), citiesCoordinates.Count()];
 
             for (int i = 0; i < citiesCoordinates.Length; i++)
             {
@@ -29,7 +29,7 @@ namespace ConsoleApp2
                         matrix[i, j] = 0;
                         continue;
                     };
-                    matrix[i,j] = APIRequest.MakeDistanceRequest(citiesCoordinates[i], citiesCoordinates[j]).Result;
+                    matrix[i,j] = (int)APIRequest.MakeDistanceRequest(citiesCoordinates[i], citiesCoordinates[j]).Result;
                 }
             }
 
@@ -41,9 +41,9 @@ namespace ConsoleApp2
 
     class TimeMatrix : Matrix
     {
-        public override double[,] Count(string[] citiesCoordinates)
+        public override int[,] Count(string[] citiesCoordinates)
         {
-            matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
+            matrix = new int[citiesCoordinates.Count(), citiesCoordinates.Count()];
 
             for (int i = 0; i < citiesCoordinates.Length; i++)
             {

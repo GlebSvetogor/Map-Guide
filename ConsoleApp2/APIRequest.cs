@@ -1,43 +1,14 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot;
-using Telegram.Bot.Types;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Newtonsoft.Json;
 using System.Text.RegularExpressions;
-using System.Reflection.PortableExecutable;
-using Telegram.Bot.Requests.Abstractions;
+using System.Threading.Tasks;
 
 namespace ConsoleApp2
 {
-    class HomeModel
-    {
-
-    }
-
-    public class Point
-    {
-        public string type { get; set; }
-        public double lon { get; set; }
-        public double lat { get; set; }
-    }
-
-    public class Request
-    {
-        public List<Point> points { get; set; }
-        public string locale { get; set; }
-        public string transport { get; set; }
-        public string route_mode { get; set; }
-        public string traffic_mode { get; set; }
-    }
-
-    class APIRequest
+    internal class APIRequest
     {
         private static string geonamesUsername = "demo654";
         private static string twoGisApiKey = "00419301-8df8-46e6-83f1-83cd25e7a8c1";
@@ -67,7 +38,6 @@ namespace ConsoleApp2
                 JObject json = JObject.Parse(responseBody);
                 JArray items = (JArray)(json["result"]["items"]);
                 string coordinates = (string)items[0]["geometry"]["centroid"];
-                Console.WriteLine($"coordinates = {coordinates}");
 
                 Match match = Regex.Match(coordinates, regex);
 
@@ -86,7 +56,7 @@ namespace ConsoleApp2
         public static async Task<double> MakeDistanceRequest(string coordinatesFrom, string coordinatesTo)
         {
             string url = $"http://router.project-osrm.org/route/v1/driving/{coordinatesFrom};{coordinatesTo}?overview=false&annotations=distance";
-            
+
             using (var httpClient = new HttpClient())
             {
                 using (var response = await httpClient.GetAsync(url))
@@ -94,13 +64,12 @@ namespace ConsoleApp2
                     string apiResponse = await response.Content.ReadAsStringAsync();
                     JObject jsonResponse = JObject.Parse(apiResponse);
                     double distance = (double)jsonResponse["routes"][0]["distance"] / 1000;
-                    Console.WriteLine($"Общее расстояние на прохождение маршрута: **{distance:N2} км**.");
                     return distance;
                 }
             }
         }
 
-        public static async Task<double> MakeDurationRequest(string coordinatesFrom, string coordinatesTo)
+        public static async Task<int> MakeDurationRequest(string coordinatesFrom, string coordinatesTo)
         {
             string url = $"http://router.project-osrm.org/route/v1/driving/{coordinatesFrom};{coordinatesTo}?overview=false&annotations=duration";
 
@@ -110,12 +79,11 @@ namespace ConsoleApp2
                 {
                     string apiResponse = await response.Content.ReadAsStringAsync();
                     JObject jsonResponse = JObject.Parse(apiResponse);
-                    double duration = (double)jsonResponse["routes"][0]["duration"] / 3600;
+                    int duration = (int)jsonResponse["routes"][0]["duration"] / 3600;
                     Console.WriteLine($"Общее время на прохождение маршрута: **{duration:N2}");
                     return duration;
                 }
             }
         }
     }
-    
 }
