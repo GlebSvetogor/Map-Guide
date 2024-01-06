@@ -12,7 +12,6 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Exceptions;
 using System.Text;
 
-
 namespace ConsoleApp2
 {
     class Presenter
@@ -79,6 +78,26 @@ namespace ConsoleApp2
                                                 chat.Id,
                                                 "Введи названия городов через пробел");
                                             return;
+                                        }
+
+                                        if (message.Text == "/map")
+                                        {
+                                            // Определите заголовок, описание и URL вашей игры
+                                            string title = "My Game";
+                                            string description = "This is my first game!";
+                                            string gameUrl = "http://127.0.0.1:5500/index.html";
+
+                                            // Создайте кнопку для запуска игры
+                                            InlineKeyboardButton playButton = new InlineKeyboardButton("Play Now!")
+                                            {
+                                                Url = gameUrl
+                                            };
+
+                                            // Создайте разметку клавиатуры и добавьте кнопку
+                                            InlineKeyboardMarkup markup = new InlineKeyboardMarkup(new[] { new[] { playButton } });
+
+                                            // Отправьте сообщение с кнопкой пользователю
+                                            await botClient.SendTextMessageAsync(chat.Id, description, replyMarkup: markup);
                                         }
 
                                         if(message.Text == "/help")
