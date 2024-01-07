@@ -9,7 +9,7 @@ namespace ConsoleApp2
         static int INF = int.MaxValue;
 
         static int n;
-        static int[,] input_matrix;
+        static double[,] input_matrix;
         static int[] path;
         static bool[] visited;
         static int best_len;
@@ -27,7 +27,7 @@ namespace ConsoleApp2
                 if (len + input_matrix[path[n - 1], 0] < best_len)
                 {
                     Array.Copy(path, best_path, n);
-                    best_len = len + input_matrix[path[n - 1], 0];
+                    best_len = (int)(len + input_matrix[path[n - 1], 0]);
                 }
                 return;
             }
@@ -38,17 +38,17 @@ namespace ConsoleApp2
                 {
                     visited[i] = true;
                     path[cur] = i;
-                    BranchAndBound(cur + 1, len + input_matrix[path[cur - 1], i]);
+                    BranchAndBound(cur + 1, (int)(len + input_matrix[path[cur - 1], i]));
                     visited[i] = false;
                 }
             }
         }
 
-        public static Tuple<int[], int> Start(int[,] matrix)
+        public static (int[], int) Start(double[,] matrix)
         {
             n = matrix.GetLength(0);
 
-            input_matrix = new int[n, n];
+            input_matrix = new double[n, n];
             path = new int[n];
             visited = new bool[n];
             best_path = new int[n];
@@ -65,9 +65,7 @@ namespace ConsoleApp2
             visited[0] = true;
             path[0] = 0;
             BranchAndBound(1, 0);
-            var result = new Tuple<int[], int>(best_path, best_len);
-            
-            return result;
+            return (best_path, best_len);
         }
     }
 

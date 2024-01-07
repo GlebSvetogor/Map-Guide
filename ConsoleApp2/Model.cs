@@ -8,8 +8,7 @@ namespace ConsoleApp2
 {
     internal class Model
     {
-        public List<string> cities;
-
+        public List<Root> cities;
         public Tuple<string, string> resultRouteInfo;
         private MatrixCreator matrixCreator;
         private CoordinateMatrix coordinateMatrix;
@@ -20,81 +19,81 @@ namespace ConsoleApp2
             
         }
 
-        public async Task<(int, string)> FindFastestRouteAsync()
-        {
-            coordinateMatrix = new CoordinateMatrix();
-
-            matrixCreator = new TimeMatrixCreator();
-            matrix = matrixCreator.CreateMatrix();
-
-            var timeMatrix = matrix.Count(await coordinateMatrix.Count(cities));
-
-            matrix.PrintMatrix(timeMatrix);
-
-            var result = TSP.Start(timeMatrix);
-
-            return CreateRouteResponse(timeMatrix, result);
-
-        }
-
-        public async Task<(int, string)> FindShortestRouteAsync()
+        public async Task<string> FindShortestRouteAsync()
         {
             coordinateMatrix = new CoordinateMatrix();
 
             matrixCreator = new DistanceMatrixCreator();
             matrix = matrixCreator.CreateMatrix();
-            var distanceMatrix = matrix.Count(await coordinateMatrix.Count(cities));
+            var routeMatrixes = matrix.Count(await coordinateMatrix.Count(cities));
+            double[,] distanceMatrix = routeMatrixes.Item1;
+            double[,] durationMatrix = routeMatrixes.Item2;
 
-            matrix.PrintMatrix(distanceMatrix);
+            matrix.PrintMatrix(distanceMatrix, "Матрица расстояний:");
+            matrix.PrintMatrix(durationMatrix, "Матрица времени:");
 
             var result = TSP.Start(distanceMatrix);
 
-            matrixCreator = new TimeMatrixCreator();
-            matrix = matrixCreator.CreateMatrix();
-            var timeMatrix = matrix.Count(await coordinateMatrix.Count(cities));
-
-            int j = 0;
-            int sum = 0;
-            for(int i = 0; i < cities.Count; i++)
-            {
-                if(i == cities.Count - 1)
-                {
-                    break;
-                }
-                j = i + 1;
-                Console.WriteLine($"Время между {result.Item1[i]} городом и {result.Item1[j]} городом = {timeMatrix[result.Item1[i], result.Item1[j]]}");
-                sum += timeMatrix[result.Item1[i], result.Item1[j]];
-            }
-
-            matrix.PrintMatrix(timeMatrix);
-
-            Console.WriteLine($"Время затраченное на самый короткий маршрут = {sum} ч.");
-
-            return CreateRouteResponse(distanceMatrix, result); 
+            return CreateRouteResponse(distanceMatrix,durationMatrix, result); 
         }
 
-        public (int, string) CreateRouteResponse(int[,] matrix, Tuple<int[], int> result)
+        public string CreateRouteResponse(double[,] distanceMatrix, double[,] durationMatrix, (int[], int) result)
         {
-            foreach (var i in result.Item1)
-            {
-                Console.WriteLine(i + "\t");
-            }
 
             StringBuilder routeStr = new StringBuilder();
-            for (int i = 0; i < matrix.GetLength(0); i++)
+
+            routeStr.Append("Маршрут: ");
+
+            for (int i = 0; i < distanceMatrix.GetLength(0); i++)
             {
-                if (i == matrix.GetLength(0) - 1)
+                if (i == distanceMatrix.GetLength(0) - 1)
                 {
-                    routeStr.Append(cities[result.Item1[i]]);
+                    routeStr.Append(cities[result.Item1[i]].name);
                 }
                 else
                 {
-                    routeStr.Append(cities[result.Item1[i]] + " -> ");
+                    routeStr.Append(cities[result.Item1[i]].name + " -> ");
+                }
+
+                if(i == distanceMatrix.GetLength(0) - 1)
+                {
+                    routeStr.Append(" -> " + cities[result.Item1[0]].name);
                 }
             }
 
+            int j = 0;
+            double fullTime = 0;
+            for (int i = 0; i < distanceMatrix.GetLength(0); i++)
+            {
+                j = i + 1;
+
+                if (j == distanceMatrix.GetLength(0))
+                {
+                    fullTime += durationMatrix[result.Item1[0], result.Item1[i]];
+                    break;
+                }
+
+                fullTime += durationMatrix[result.Item1[i], result.Item1[j]];
+            }
+
+            routeStr.Append("\n" + "Кратчайший путь займет: " + (int)result.Item2 + "км. и " + (int)fullTime + "ч." + "\n\n");
+
+            j = 0;
+            for (int i = 0; i < distanceMatrix.GetLength(0); i++)
+            {
+                j = i + 1;
+
+                if(j == distanceMatrix.GetLength(0))
+                {
+                    routeStr.Append($"Путь: {cities[result.Item1[i]].name} -> {cities[result.Item1[0]].name} займет {(int)distanceMatrix[result.Item1[0], result.Item1[i]]} км. и {(int)durationMatrix[result.Item1[0], result.Item1[i]]} ч. \n");
+                    break;
+                }
+
+                routeStr.Append($"Путь: {cities[result.Item1[i]].name} -> {cities[result.Item1[j]].name} займет {(int)distanceMatrix[result.Item1[i], result.Item1[j]]} км. и {(int)durationMatrix[result.Item1[i], result.Item1[j]]} ч. \n");
+            }
+
             cities.Clear();
-            return (result.Item2, routeStr.ToString());
+            return routeStr.ToString();
         }
 
     }

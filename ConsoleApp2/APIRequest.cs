@@ -11,7 +11,7 @@ namespace ConsoleApp2
     internal class APIRequest
     {
         private static string geonamesUsername = "demo654";
-        private static string _2GisApiKey = "00419301-8df8-46e6-83f1-83cd25e7a8c1";
+        private static string googleCloudApiKey = $"https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
 
         public static async Task<JObject> MakeCityRequest(string city)
         {
@@ -26,36 +26,9 @@ namespace ConsoleApp2
             }
         }
 
-        public static async Task<string> MakeCoordinateRequest(string city)
+        public static async Task<(double,double)> MakeDefaultRequest(string coordinatesFrom, string coordinatesTo)
         {
-            string url = $"https://catalog.api.2gis.com/3.0/items?&q={city}&fields=items.geometry.centroid&key={_2GisApiKey}"; // URL-адрес запроса
-            string regex = @"POINT\((\d+\.\d+) (\d+\.\d+)\)";
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                string responseBody = await response.Content.ReadAsStringAsync();
-                JObject json = JObject.Parse(responseBody);
-                JArray items = (JArray)(json["result"]["items"]);
-                string coordinates = (string)items[0]["geometry"]["centroid"];
-
-                Match match = Regex.Match(coordinates, regex);
-
-                if (match.Success)
-                {
-                    string matchedCoordinates = match.Groups[1].Value + " " + match.Groups[2].Value;
-                    return matchedCoordinates;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-        public static async Task<double> MakeDistanceRequest(string coordinatesFrom, string coordinatesTo)
-        {
-            string url = $"http://router.project-osrm.org/route/v1/driving/{coordinatesFrom};{coordinatesTo}?overview=false&annotations=distance";
+            string url = googleCloudApiKey.Replace("coordinatesFrom", coordinatesFrom).Replace("coordinatesTo", coordinatesTo);
 
             using (var httpClient = new HttpClient())
             {
@@ -63,24 +36,12 @@ namespace ConsoleApp2
                 {
                     string apiResponse = await response.Content.ReadAsStringAsync();
                     JObject jsonResponse = JObject.Parse(apiResponse);
-                    double distance = (double)jsonResponse["routes"][0]["distance"] / 1000;
-                    return distance;
-                }
-            }
-        }
+                    JToken routes = jsonResponse["routes"];
+                    JToken legs = routes[0]["legs"];
+                    double distance = (double)legs[0]["distance"]["value"] / 1000;
+                    double duration = (double)legs[0]["duration"]["value"] / 3600;
 
-        public static async Task<int> MakeDurationRequest(string coordinatesFrom, string coordinatesTo)
-        {
-            string url = $"http://router.project-osrm.org/route/v1/driving/{coordinatesFrom};{coordinatesTo}?overview=false&annotations=duration";
-
-            using (var httpClient = new HttpClient())
-            {
-                using (var response = await httpClient.GetAsync(url))
-                {
-                    string apiResponse = await response.Content.ReadAsStringAsync();
-                    JObject jsonResponse = JObject.Parse(apiResponse);
-                    int duration = (int)jsonResponse["routes"][0]["duration"] / 3600;
-                    return duration;
+                    return (distance,duration);
                 }
             }
         }

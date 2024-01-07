@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Exceptions;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace ConsoleApp2
 {
@@ -60,180 +61,213 @@ namespace ConsoleApp2
                 switch (update.Type)
                 {
                     case UpdateType.Message:
+                    {
+                        var message = update.Message;
+
+                        var user = message.From;
+
+                        var chat = message.Chat;
+
+                        switch (message.Type)
                         {
-                            var message = update.Message;
+                            case MessageType.Text:
+                                {
 
-                            var user = message.From;
-
-                            var chat = message.Chat;
-
-                            switch (message.Type)
-                            {
-                                case MessageType.Text:
+                                    if (message.Text == "/start")
                                     {
-                                        if (message.Text == "/start")
-                                        {
-                                            InputCities = true;
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Введи названия городов через пробел");
-                                            return;
-                                        }
+                                        var inlineKeyboard = new InlineKeyboardMarkup(
+                                    new List<InlineKeyboardButton[]>() // здесь создаем лист (массив), который содрежит в себе массив из класса кнопок
+                                    {
+                                    // Каждый новый массив - это дополнительные строки,
+                                    // а каждая дополнительная строка (кнопка) в массиве - это добавление ряда
 
-                                        if (message.Text == "/map")
-                                        {
-                                            // Определите заголовок, описание и URL вашей игры
-                                            string title = "My Game";
-                                            string description = "This is my first game!";
-                                            string gameUrl = "http://127.0.0.1:5500/index.html";
-
-                                            // Создайте кнопку для запуска игры
-                                            InlineKeyboardButton playButton = new InlineKeyboardButton("Play Now!")
-                                            {
-                                                Url = gameUrl
-                                            };
-
-                                            // Создайте разметку клавиатуры и добавьте кнопку
-                                            InlineKeyboardMarkup markup = new InlineKeyboardMarkup(new[] { new[] { playButton } });
-
-                                            // Отправьте сообщение с кнопкой пользователю
-                                            await botClient.SendTextMessageAsync(chat.Id, description, replyMarkup: markup);
-                                        }
-
-                                        if(message.Text == "/help")
-                                        {
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "С помощью этой инструкции ты сможешь найти оптимальный маршрут:\n" +
-                                                "1. Введите команду /start для ввода названий городов\n" +
-                                                "2. Выберите условие нахождения нужного маршрута"
-                                            );
-                                            return;
-                                        }
-
-                                        if (message.Text == "Самый быстрый маршрут")
-                                        {
-                                            InlineKeyaboard = false;
-                                            Console.WriteLine("Вычисляется самый быстрый маршрут ...");
-
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Происходит нахождение самого быстрого маршрута, пожалуйста подождите ..."
-                                            );
-
-                                            var resultRouteInfo = await model.FindFastestRouteAsync();
-
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Самый быстрый путь займет: " + resultRouteInfo.Item1 + " ч." + "\n" +
-                                                "Маршрут: " + resultRouteInfo.Item2
-                                            );
-
-                                        }
-
-                                        if (message.Text == "Самый короткий маршрут")
-                                        {
-                                            InlineKeyaboard = false;
-                                            Console.WriteLine("Вычисляется самый короткий маршрут ...");
-
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Происходит нахождение самого короткого маршрута, пожалуйста подождите ..."
-                                            );
-
-                                            var resultRouteInfo = await model.FindShortestRouteAsync();
-
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Кратчайший путь займет: " + resultRouteInfo.Item1 + " км." + "\n" +
-                                                "Маршрут: " + resultRouteInfo.Item2
-                                            );
+                                    new InlineKeyboardButton[] // тут создаем массив кнопок
+                                    {
+                                        InlineKeyboardButton.WithUrl("Это кнопка с сайтом", "https://habr.com/"),
+                                        InlineKeyboardButton.WithCallbackData("А это просто кнопка", "button1"),
+                                    },
+                                    new InlineKeyboardButton[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Тут еще одна", "button2"),
+                                        InlineKeyboardButton.WithCallbackData("И здесь", "button3"),
+                                    },
+                                    });
+                                        InputCities = true;
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            "Введи названия городов через пробел",
+                                            replyMarkup:inlineKeyboard);
 
 
-                                        }
-
-                                        if (InlineKeyaboard)
-                                        {
-                                            await botClient.SendTextMessageAsync(chat.Id, "Ошибка ввода ! \n" +
-                                                "Выбери условие нахождения маршрута с помощью inline клавиатуры ...");
-                                        }
-
-                                        if (InputCities)
-                                        {
-                                            InputCities = false;
-
-                                            //await botClient.SendTextMessageAsync(
-                                            //    chat.Id,
-                                            //    "Сейчас проверю что ты там отправил ..."
-                                            //);
-
-                                            var validationTuple = await InputValidator.CheckCities(message.Text);
-
-                                            InlineKeyaboard = validationTuple.Item1.Count >= 3 ? true : false;
-
-                                            if(validationTuple.Item2 != "")
-                                            {
-                                                await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                validationTuple.Item2
-                                                );
-                                            }
-
-                                            if (!InlineKeyaboard)
-                                            {
-                                                await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                "Необходимо минимум 3 города для нахождения маршрута, введи команду /start еще раз и заполни больше городов"
-                                                );
-                                            }
-                                            else
-                                            {
-                                                model.cities = validationTuple.Item1;
-
-                                                var replyKeyboard = new ReplyKeyboardMarkup(
-                                                new List<KeyboardButton[]>()
-                                                {
-                                                    new KeyboardButton[]
-                                                    {
-                                                        new KeyboardButton("Самый быстрый маршрут")
-                                                    },
-                                                    new KeyboardButton[]
-                                                    {
-                                                        new KeyboardButton("Самый короткий маршрут")
-                                                    }
-                                                })
-                                                {
-                                                    ResizeKeyboard = true,
-                                                    OneTimeKeyboard = true
-                                                };
-
-                                                await botClient.SendTextMessageAsync(
-                                                    chat.Id,
-                                                    "Выбери условие нахождения маршрута",
-                                                    replyMarkup: replyKeyboard);
-
-                                            }
-                                        }
-
-                                        break;
+                                        return;
                                     }
-                                default:
+
+                                    if(message.Text == "/help")
                                     {
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
-                                            "Используй только текст!");
-                                        break;
+                                            "С помощью этой инструкции ты сможешь найти оптимальный маршрут:\n" +
+                                            "1. Введите команду /start для ввода названий городов\n" +
+                                            "2. Выберите условие нахождения нужного маршрута"
+                                        );
+                                        return;
                                     }
-                            }// switch (message.Type)
 
-                            break;
+                                    if (message.Text == "Самый короткий маршрут")
+                                    {
+                                        InlineKeyaboard = false;
+                                        Console.WriteLine("Вычисляется самый короткий маршрут ...");
 
-                        }// case (UpdateType.Message)
-                    case UpdateType.InlineQuery:
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            "Происходит нахождение самого короткого маршрута, пожалуйста подождите ..."
+                                        );
+
+                                        string resultRouteInfo = await model.FindShortestRouteAsync();
+
+                                    }
+
+                                    if (message.Text == "Настраиваемый маршрут")
+                                    {
+                                        InlineKeyaboard = false;
+                                        Console.WriteLine("Вычисляется самый короткий маршрут ...");
+
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            "Происходит нахождение самого короткого маршрута, пожалуйста подождите ..."
+                                        );
+
+                                        string resultRouteInfo = await model.FindShortestRouteAsync();
+
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            resultRouteInfo
+                                        );
+                                    }
+
+                                    if (InputCities)
+                                    {
+                                        InputCities = false;
+
+                                        var validatorResponse = await InputValidator.CheckCities(message.Text);
+                                            
+                                        InlineKeyaboard = validatorResponse.Item2.Count >= 3 ? true : false;
+
+                                        if(validatorResponse.Item1 != "")
+                                        {
+                                            await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            validatorResponse.Item1
+                                            );
+                                        }
+
+                                        if (!InlineKeyaboard)
+                                        {
+                                            await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            "Необходимо минимум 3 города для нахождения маршрута, введи команду /start еще раз и заполни больше городов"
+                                            );
+                                        }
+                                        else
+                                        {
+                                            model.cities = validatorResponse.Item2;
+
+                                            var replyKeyboard = new ReplyKeyboardMarkup(
+                                            new List<KeyboardButton[]>()
+                                            {
+                                                new KeyboardButton[]
+                                                {
+                                                    new KeyboardButton("Самый короткий маршрут")
+                                                },
+                                                new KeyboardButton[]
+                                                {
+                                                    new KeyboardButton("Настраиваемый маршрут")
+                                                }
+                                            })
+                                            {
+                                                ResizeKeyboard = true,
+                                                OneTimeKeyboard = true
+                                            };
+
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Выберите вариант нахождения маршрута",
+                                                replyMarkup: replyKeyboard);
+                                        }
+                                    }
+
+                                    break;
+                                }
+                            default:
+                                {
+                                    await botClient.SendTextMessageAsync(
+                                        chat.Id,
+                                        "Используй только текст!");
+                                    break;
+                                }
+                        }// switch (message.Type)
+
+                        break;
+
+                    }// case (UpdateType.Message)
+
+                    case UpdateType.CallbackQuery:
+                    {
+                        // Переменная, которая будет содержать в себе всю информацию о кнопке, которую нажали
+                        var callbackQuery = update.CallbackQuery;
+
+                        // Аналогично и с Message мы можем получить информацию о чате, о пользователе и т.д.
+                        var user = callbackQuery.From;
+
+                        // Выводим на экран нажатие кнопки
+                        Console.WriteLine($"{user.FirstName} ({user.Id}) нажал на кнопку: {callbackQuery.Data}");
+
+                        // Вот тут нужно уже быть немножко внимательным и не путаться!
+                        // Мы пишем не callbackQuery.Chat , а callbackQuery.Message.Chat , так как
+                        // кнопка привязана к сообщению, то мы берем информацию от сообщения.
+                        var chat = callbackQuery.Message.Chat;
+
+                        // Добавляем блок switch для проверки кнопок
+                        switch (callbackQuery.Data)
                         {
-                            break;
+                            case "button1":
+                            {
+                                // В этом типе клавиатуры обязательно нужно использовать следующий метод
+                                await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
+                                // Для того, чтобы отправить телеграмму запрос, что мы нажали на кнопку
+
+                                await botClient.SendTextMessageAsync(
+                                    chat.Id,
+                                    $"Вы нажали на {callbackQuery.Data}");
+                                return;
+                            }
+
+                            case "button2":
+                            {
+                                // А здесь мы добавляем наш сообственный текст, который заменит слово "загрузка", когда мы нажмем на кнопку
+                                await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "Тут может быть ваш текст!");
+
+                                await botClient.SendTextMessageAsync(
+                                    chat.Id,
+                                    $"Вы нажали на {callbackQuery.Data}");
+                                return;
+                            }
+
+                            case "button3":
+                            {
+                                // А тут мы добавили еще showAlert, чтобы отобразить пользователю полноценное окно
+                                await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "А это полноэкранный текст!", showAlert: true);
+
+                                await botClient.SendTextMessageAsync(
+                                    chat.Id,
+                                    $"Вы нажали на {callbackQuery.Data}");
+                                return;
+                            }
                         }
-                }// case (UpdateType = message)
+
+                        return;
+                    }
+                }
             }catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
@@ -251,47 +285,35 @@ namespace ConsoleApp2
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
         }
-
-        private static void PrintMatrix(int[,] matrix)
-        {
-            for (int i = 0; i < matrix.GetLength(0); i++)
-            {
-                for (int j = 0; j < matrix.GetLength(1); j++)
-                {
-                    Console.Write(matrix[i, j] + "\t");
-                }
-                Console.WriteLine();
-            }
-        }
-
-
     }
-
-    
 
     class InputValidator
     {
-        private static string twoGisApiKey = "00419301-8df8-46e6-83f1-83cd25e7a8c1";
-        public static async Task<(List<string>,string)> CheckCities(string mes)
+        private static string geonamesUsername = "demo654";
+
+        public static async Task<(string, List<Root>)> CheckCities(string mes)
         {
             List<string> userInputCities = new List<string>();
-            List<string> cities = new List<string>();
+            List<Root> cities = new List<Root>();
 
             StringBuilder notCities = new StringBuilder();
             userInputCities.AddRange(mes.Trim().Split(' '));
             foreach (string cityName in userInputCities)
             {
                 using var client = new HttpClient();
-                HttpResponseMessage response = (await client.GetAsync($"https://catalog.api.2gis.com/3.0/items?q={cityName}&key={twoGisApiKey}"));
+                var response = await client.GetAsync($"http://api.geonames.org/searchJSON?q={cityName}&username={geonamesUsername}&maxRows=5");
                 if (response.IsSuccessStatusCode)
                 {
                     string responseBody = await response.Content.ReadAsStringAsync();
                     JObject json = JObject.Parse(responseBody);
-                    
-                    if ((int)json["result"]["total"] >= 1)
+                    Console.WriteLine(json);
+                    if ((int)json["totalResultsCount"] >= 1)
                     {
-                        cities.Add(cityName);
-                        Console.WriteLine($"{cityName} является городом");
+                        JArray geonames = (JArray)json["geonames"];
+                        JToken geonamesFirst = geonames.First;
+                        Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(geonamesFirst.ToString());
+                        cities.Add(myDeserializedClass);
+                        
                     }
                     else
                     {
@@ -306,8 +328,8 @@ namespace ConsoleApp2
                 }
             }
 
-            var result = (cities, notCities.ToString());
-            return result;
+            string validatorResponse = notCities.ToString();
+            return (validatorResponse, cities);
         }
 
 
