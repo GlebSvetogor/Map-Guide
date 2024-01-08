@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
+using static System.Net.WebRequestMethods;
 
 namespace ConsoleApp2
 {
@@ -13,6 +14,7 @@ namespace ConsoleApp2
         private MatrixCreator matrixCreator;
         private CoordinateMatrix coordinateMatrix;
         private Matrix matrix;
+        private int[]citiesOrder;
 
         public Model() 
         { 
@@ -33,8 +35,36 @@ namespace ConsoleApp2
             matrix.PrintMatrix(durationMatrix, "Матрица времени:");
 
             var result = TSP.Start(distanceMatrix);
+            citiesOrder = result.Item1;
+
+            Console.WriteLine("Результат был получен");
 
             return CreateRouteResponse(distanceMatrix,durationMatrix, result); 
+        }
+
+        public async Task<String> CreateGoogleMapLink()
+        {
+            CoordinateMatrix coordinateMatrix = new CoordinateMatrix();
+            var coordinateArray = await coordinateMatrix.Count(cities);
+            cities.Clear();
+            return MakeGoogleMapRouteLink(coordinateArray,citiesOrder);
+        }
+
+        public static string MakeGoogleMapRouteLink(string[] coordinateArray, int[] citiesOrder)
+        {
+            string googleMapsUrl = $"https://www.google.com/maps/dir/?api=1&destination={coordinateArray[citiesOrder[0]]}&travelmode=driving&waypoints=wayPointsCoordinates&dir_action=navigate";
+            var waypoints = new StringBuilder();
+            for(int i = 0; i < citiesOrder.Length; i++)
+            {
+                if(i == citiesOrder.Length - 1)
+                {
+                    waypoints.Append(coordinateArray[citiesOrder[i]]);
+                    break;
+                }
+                waypoints.Append(coordinateArray[citiesOrder[i]] + "|");
+            }
+            string url = googleMapsUrl.Replace("wayPointsCoordinates", waypoints.ToString());
+            return url;
         }
 
         public string CreateRouteResponse(double[,] distanceMatrix, double[,] durationMatrix, (int[], int) result)
@@ -92,7 +122,8 @@ namespace ConsoleApp2
                 routeStr.Append($"Путь: {cities[result.Item1[i]].name} -> {cities[result.Item1[j]].name} займет {(int)distanceMatrix[result.Item1[i], result.Item1[j]]} км. и {(int)durationMatrix[result.Item1[i], result.Item1[j]]} ч. \n");
             }
 
-            cities.Clear();
+            Console.WriteLine("Ответ был сформирован");
+            //cities.Clear();
             return routeStr.ToString();
         }
 

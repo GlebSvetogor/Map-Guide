@@ -33,6 +33,7 @@ namespace ConsoleApp2
                 AllowedUpdates = new[] 
                 {
                     UpdateType.Message, 
+                    UpdateType.CallbackQuery
                 },
                 ThrowPendingUpdates = true,
             };
@@ -75,34 +76,18 @@ namespace ConsoleApp2
 
                                     if (message.Text == "/start")
                                     {
-                                        var inlineKeyboard = new InlineKeyboardMarkup(
-                                    new List<InlineKeyboardButton[]>() // здесь создаем лист (массив), который содрежит в себе массив из класса кнопок
-                                    {
-                                    // Каждый новый массив - это дополнительные строки,
-                                    // а каждая дополнительная строка (кнопка) в массиве - это добавление ряда
-
-                                    new InlineKeyboardButton[] // тут создаем массив кнопок
-                                    {
-                                        InlineKeyboardButton.WithUrl("Это кнопка с сайтом", "https://habr.com/"),
-                                        InlineKeyboardButton.WithCallbackData("А это просто кнопка", "button1"),
-                                    },
-                                    new InlineKeyboardButton[]
-                                    {
-                                        InlineKeyboardButton.WithCallbackData("Тут еще одна", "button2"),
-                                        InlineKeyboardButton.WithCallbackData("И здесь", "button3"),
-                                    },
-                                    });
+                                        
                                         InputCities = true;
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
-                                            "Введи названия городов через пробел",
-                                            replyMarkup:inlineKeyboard);
+                                            "Введите названия городов через пробел");
 
 
                                         return;
                                     }
 
-                                    if(message.Text == "/help")
+
+                                        if (message.Text == "/help")
                                     {
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
@@ -125,7 +110,30 @@ namespace ConsoleApp2
 
                                         string resultRouteInfo = await model.FindShortestRouteAsync();
 
-                                    }
+                                            var inlineKeyboard = new InlineKeyboardMarkup(
+                                                new List<InlineKeyboardButton[]>()
+                                                {
+                                                    new InlineKeyboardButton[]
+                                                    {
+                                                        InlineKeyboardButton.WithCallbackData("Получить Google карту", "button1"),
+                                                    },
+                                                    new InlineKeyboardButton[]
+                                                    {
+                                                        InlineKeyboardButton.WithCallbackData("Сохранить маршрут", "button2"),
+                                                    },
+                                                    new InlineKeyboardButton[]
+                                                    {
+                                                        InlineKeyboardButton.WithCallbackData("Найти новый маршрут", "button2"),
+                                                    },
+                                                });
+
+                                            await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            resultRouteInfo,
+                                            replyMarkup: inlineKeyboard
+                                        );
+
+                                        }
 
                                     if (message.Text == "Настраиваемый маршрут")
                                     {
@@ -212,61 +220,49 @@ namespace ConsoleApp2
                     }// case (UpdateType.Message)
 
                     case UpdateType.CallbackQuery:
-                    {
-                        // Переменная, которая будет содержать в себе всю информацию о кнопке, которую нажали
-                        var callbackQuery = update.CallbackQuery;
-
-                        // Аналогично и с Message мы можем получить информацию о чате, о пользователе и т.д.
-                        var user = callbackQuery.From;
-
-                        // Выводим на экран нажатие кнопки
-                        Console.WriteLine($"{user.FirstName} ({user.Id}) нажал на кнопку: {callbackQuery.Data}");
-
-                        // Вот тут нужно уже быть немножко внимательным и не путаться!
-                        // Мы пишем не callbackQuery.Chat , а callbackQuery.Message.Chat , так как
-                        // кнопка привязана к сообщению, то мы берем информацию от сообщения.
-                        var chat = callbackQuery.Message.Chat;
-
-                        // Добавляем блок switch для проверки кнопок
-                        switch (callbackQuery.Data)
                         {
-                            case "button1":
-                            {
-                                // В этом типе клавиатуры обязательно нужно использовать следующий метод
-                                await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
-                                // Для того, чтобы отправить телеграмму запрос, что мы нажали на кнопку
+                            var callbackQuery = update.CallbackQuery;
 
-                                await botClient.SendTextMessageAsync(
-                                    chat.Id,
-                                    $"Вы нажали на {callbackQuery.Data}");
-                                return;
+                            var user = callbackQuery.From;
+
+                            Console.WriteLine($"{user.FirstName} ({user.Id}) нажал на кнопку: {callbackQuery.Data}");
+
+
+                            var chat = callbackQuery.Message.Chat;
+
+                            // Добавляем блок switch для проверки кнопок
+                            switch (callbackQuery.Data)
+                            {
+                                // Data - это придуманный нами id кнопки, мы его указывали в параметре
+                                // callbackData при создании кнопок. У меня это button1, button2 и button3
+
+                                case "button1":
+                                    {
+                                        // В этом типе клавиатуры обязательно нужно использовать следующий метод
+                                        await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
+                                        var link = model.CreateGoogleMapLink().Result;
+                                        Console.WriteLine($"link = {link}");
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            link);
+                                        return;
+                                    }
+
+                                case "button2":
+                                    {
+                                        // А здесь мы добавляем наш сообственный текст, который заменит слово "загрузка", когда мы нажмем на кнопку
+                                        await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "Тут может быть ваш текст!");
+
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            $"Вы нажали на {callbackQuery.Data}");
+                                        return;
+                                    }
+
                             }
 
-                            case "button2":
-                            {
-                                // А здесь мы добавляем наш сообственный текст, который заменит слово "загрузка", когда мы нажмем на кнопку
-                                await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "Тут может быть ваш текст!");
-
-                                await botClient.SendTextMessageAsync(
-                                    chat.Id,
-                                    $"Вы нажали на {callbackQuery.Data}");
-                                return;
-                            }
-
-                            case "button3":
-                            {
-                                // А тут мы добавили еще showAlert, чтобы отобразить пользователю полноценное окно
-                                await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "А это полноэкранный текст!", showAlert: true);
-
-                                await botClient.SendTextMessageAsync(
-                                    chat.Id,
-                                    $"Вы нажали на {callbackQuery.Data}");
-                                return;
-                            }
+                            return;
                         }
-
-                        return;
-                    }
                 }
             }catch (Exception ex)
             {
