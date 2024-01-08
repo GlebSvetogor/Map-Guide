@@ -55,11 +55,20 @@ namespace ConsoleApp2
             return (distanceMatrix, durationMatrix);
         }
     }
+    abstract class MatrixCreator
+    {
+        public abstract Matrix CreateMatrix();
+    }
+
+    class DistanceMatrixCreator : MatrixCreator
+    {
+        public override Matrix CreateMatrix() => new DistanceMatrix();
+    }
 
     class CoordinateMatrix
     {
         public string[] array;
-        public async Task<string[]> Count(List<Root> cities)
+        public string[] Count(List<Root> cities)
         {
             array = new string[cities.Count];
             int i = 0;
@@ -74,14 +83,5 @@ namespace ConsoleApp2
         }
     }
 
-    abstract class MatrixCreator
-    {
-        public abstract Matrix CreateMatrix();
-    }
-
-    class DistanceMatrixCreator : MatrixCreator
-    {
-        public override Matrix CreateMatrix() => new DistanceMatrix();
-    }
 
 }

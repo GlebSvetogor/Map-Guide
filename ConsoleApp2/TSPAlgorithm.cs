@@ -44,7 +44,7 @@ namespace ConsoleApp2
             }
         }
 
-        public static (int[], int) Start(double[,] matrix)
+        public static int[] Start(double[,] matrix)
         {
             n = matrix.GetLength(0);
 
@@ -65,7 +65,7 @@ namespace ConsoleApp2
             visited[0] = true;
             path[0] = 0;
             BranchAndBound(1, 0);
-            return (best_path, best_len);
+            return best_path;
         }
     }
 

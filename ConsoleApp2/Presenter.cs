@@ -23,6 +23,7 @@ namespace ConsoleApp2
         private static Model model;
         private static bool InputCities = false;
         private static bool InlineKeyaboard = false;
+        private static MapLinkCreator mapLinkCreator;
 
         static async Task Main()
         {
@@ -238,13 +239,19 @@ namespace ConsoleApp2
 
                                 case "button1":
                                     {
-                                        // В этом типе клавиатуры обязательно нужно использовать следующий метод
+                                        mapLinkCreator = new GoogleMapLinkCreator();
+                                        MapLink googleMapLink = mapLinkCreator.CreateMapLink();
+
+                                        string link = googleMapLink.CreateMapLink(model.citiesIndexesRouteOrder, model.coordinateMatrix.Count(model.cities));
+
                                         await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
-                                        var link = model.CreateGoogleMapLink().Result;
-                                        Console.WriteLine($"link = {link}");
+
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
                                             link);
+
+                                        model.cities.Clear();
+
                                         return;
                                     }
 
@@ -256,6 +263,9 @@ namespace ConsoleApp2
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
                                             $"Вы нажали на {callbackQuery.Data}");
+
+                                        model.cities.Clear();
+
                                         return;
                                     }
 
