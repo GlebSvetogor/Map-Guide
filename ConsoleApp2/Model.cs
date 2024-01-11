@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
-using static System.Net.WebRequestMethods;
 
 namespace ConsoleApp2
 {
     internal class Model
     {
-        public List<Root> cities;
-        public Tuple<string, string> resultRouteInfo;
-        private MatrixCreator matrixCreator;
+        public MapLinkCreator mapLinkCreator;
+        public MatrixCreator matrixCreator;
+        public List<City> cities;
         public CoordinateMatrix coordinateMatrix;
-        private Matrix matrix;
         private RouteResponseCreator routeResponseCreator;
+        private Matrix matrix;
         public int[] citiesIndexesRouteOrder;
 
         public Model() { }
@@ -25,9 +25,10 @@ namespace ConsoleApp2
 
             matrixCreator = new DistanceMatrixCreator();
             matrix = matrixCreator.CreateMatrix();
-            var routeMatrixes = matrix.Count(coordinateMatrix.Count(cities));
-            double[,] distanceMatrix = routeMatrixes.Item1;
-            double[,] durationMatrix = routeMatrixes.Item2;
+            double[,] distanceMatrix = matrix.Count(coordinateMatrix.Count(cities));
+            matrixCreator = new DurationMatrixCreator();
+            matrix = matrixCreator.CreateMatrix();
+            double[,] durationMatrix = matrix.Count(coordinateMatrix.Count(cities));
 
             matrix.PrintMatrix(distanceMatrix, "Матрица расстояний:");
             matrix.PrintMatrix(durationMatrix, "Матрица времени:");
@@ -39,6 +40,13 @@ namespace ConsoleApp2
             routeResponseCreator = new RouteDistanceAndDurationResponseCreator();
             var routeResponse = routeResponseCreator.CreateRouteResponse();
             return routeResponse.CreateRouteResponse(distanceMatrix,durationMatrix, citiesIndexesRouteOrder, cities); 
+        }
+
+        public string MakeMapLink()
+        {
+            mapLinkCreator = new GoogleMapLinkCreator();
+            MapLink googleMapLink = mapLinkCreator.CreateMapLink();
+            return googleMapLink.CreateMapLink(citiesIndexesRouteOrder, coordinateMatrix.Count(cities));
         }
 
     }

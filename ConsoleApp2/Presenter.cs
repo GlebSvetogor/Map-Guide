@@ -12,6 +12,9 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Exceptions;
 using System.Text;
 using Newtonsoft.Json;
+using static System.Net.WebRequestMethods;
+using System.Linq;
+using Telegram.Bot.Requests.Abstractions;
 
 namespace ConsoleApp2
 {
@@ -19,11 +22,10 @@ namespace ConsoleApp2
     {
         private static ITelegramBotClient _botClient;
         private static ReceiverOptions _receiverOptions;
-        private static MatrixCreator matrixCreator;
         private static Model model;
+        public static APIRequest request;
         private static bool InputCities = false;
         private static bool InlineKeyaboard = false;
-        private static MapLinkCreator mapLinkCreator;
 
         static async Task Main()
         {
@@ -82,7 +84,6 @@ namespace ConsoleApp2
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
                                             "Введите названия городов через пробел");
-
 
                                         return;
                                     }
@@ -158,29 +159,47 @@ namespace ConsoleApp2
                                     {
                                         InputCities = false;
 
-                                        var validatorResponse = await InputValidator.CheckCities(message.Text);
-                                            
-                                        InlineKeyaboard = validatorResponse.Item2.Count >= 3 ? true : false;
+                                        var validatorResponse = await CheckCitiesInputAsync(message.Text);
+                                        string isNotCityInput = validatorResponse.Item1;
+                                        bool isEnoughCities = validatorResponse.Item2;
 
-                                        if(validatorResponse.Item1 != "")
+
+                                        if (isEnoughCities)
                                         {
-                                            await botClient.SendTextMessageAsync(
-                                            chat.Id,
-                                            validatorResponse.Item1
-                                            );
+                                            if(isNotCityInput != "")
+                                            {
+                                                await botClient.SendTextMessageAsync(
+                                                    chat.Id,
+                                                    isNotCityInput
+                                                );
+                                                InlineKeyaboard = true;
+                                            }
+                                            else
+                                            {
+                                                InlineKeyaboard = true;
+                                            }
                                         }
-
-                                        if (!InlineKeyaboard)
+                                        else if(isNotCityInput != "")
                                         {
                                             await botClient.SendTextMessageAsync(
-                                            chat.Id,
-                                            "Необходимо минимум 3 города для нахождения маршрута, введи команду /start еще раз и заполни больше городов"
+                                                chat.Id,
+                                                isNotCityInput
+                                            );
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Необходимо минимум 3 города для нахождения маршрута, введи команду /start еще раз и заполни больше городов"
                                             );
                                         }
                                         else
                                         {
-                                            model.cities = validatorResponse.Item2;
+                                            await botClient.SendTextMessageAsync(
+                                                chat.Id,
+                                                "Необходимо минимум 3 города для нахождения маршрута, введи команду /start еще раз и заполни больше городов"
+                                            );
+                                        }
 
+                                        if(InlineKeyaboard)
+                                        {
                                             var replyKeyboard = new ReplyKeyboardMarkup(
                                             new List<KeyboardButton[]>()
                                             {
@@ -201,7 +220,8 @@ namespace ConsoleApp2
                                             await botClient.SendTextMessageAsync(
                                                 chat.Id,
                                                 "Выберите вариант нахождения маршрута",
-                                                replyMarkup: replyKeyboard);
+                                                replyMarkup: replyKeyboard
+                                            );
                                         }
                                     }
 
@@ -239,10 +259,7 @@ namespace ConsoleApp2
 
                                 case "button1":
                                     {
-                                        mapLinkCreator = new GoogleMapLinkCreator();
-                                        MapLink googleMapLink = mapLinkCreator.CreateMapLink();
-
-                                        string link = googleMapLink.CreateMapLink(model.citiesIndexesRouteOrder, model.coordinateMatrix.Count(model.cities));
+                                        string link = model.MakeMapLink();
 
                                         await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
 
@@ -291,57 +308,39 @@ namespace ConsoleApp2
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
         }
-    }
 
-    class InputValidator
-    {
-        private static string geonamesUsername = "demo654";
-
-        public static async Task<(string, List<Root>)> CheckCities(string mes)
+        public static async Task<(string, bool)> CheckCitiesInputAsync(string mes)
         {
-            List<string> userInputCities = new List<string>();
-            List<Root> cities = new List<Root>();
-
+            List<City> cities = new List<City>();
             StringBuilder notCities = new StringBuilder();
+            request = new APIRequest();
+            string requestUrl = "https://maps.googleapis.com/maps/api/geocode/json?address=location&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
+            string url = requestUrl;
+
+            List<string> userInputCities = new List<string>();
+
             userInputCities.AddRange(mes.Trim().Split(' '));
             foreach (string cityName in userInputCities)
             {
-                using var client = new HttpClient();
-                var response = await client.GetAsync($"http://api.geonames.org/searchJSON?q={cityName}&username={geonamesUsername}&maxRows=5");
-                if (response.IsSuccessStatusCode)
-                {
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    JObject json = JObject.Parse(responseBody);
-                    Console.WriteLine(json);
-                    if ((int)json["totalResultsCount"] >= 1)
-                    {
-                        JArray geonames = (JArray)json["geonames"];
-                        JToken geonamesFirst = geonames.First;
-                        Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(geonamesFirst.ToString());
-                        cities.Add(myDeserializedClass);
-                        
-                    }
-                    else
-                    {
-                        Console.WriteLine($"{cityName} не является городом");
-                        notCities.Append($"{cityName} не является городом" + "\n");
-                    }
-                    
-                }
-                else
-                {
-                    Console.WriteLine($"Error: {response.StatusCode}");
-                }
+                url = requestUrl.Replace("location", cityName);
+                var isCity = await request.MakeCityRequestAsync(url, cities);
+                if (isCity != true) { notCities.Append($"{cities.Last().longName} не является городом" + "\n"); }
             }
 
-            string validatorResponse = notCities.ToString();
-            return (validatorResponse, cities);
+            if (cities.Count >= 3)
+            {
+                model.cities = cities;
+                string validatorResponse = notCities.ToString();
+                return (validatorResponse,true);
+            }
+            else
+            {
+                string validatorResponse = notCities.ToString();
+                return (validatorResponse, false);
+            }
+            
         }
-
-
-        
     }
-
 }
         
             

@@ -5,14 +5,16 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.WebRequestMethods;
 
 namespace ConsoleApp2
 {
     abstract class Matrix
     {
-        public double[,] distanceMatrix;
-        public double[,] durationMatrix;
-        public abstract (double[,], double[,]) Count(string[] citiesCoordinates);
+        public double[,] matrix { get; protected set; }
+        public APIRequest request { get; protected set; }
+        public abstract double[,] Count(string[] citiesCoordinates);
+        public abstract void fillMatrix(string[] coordinates, string requestUrl);
         public void PrintMatrix(double [,]matrix, string message)
         {
             Console.WriteLine(message);
@@ -31,30 +33,66 @@ namespace ConsoleApp2
 
     class DistanceMatrix : Matrix
     {
-        public override (double[,], double[,]) Count(string[] citiesCoordinates)
-        {
-            distanceMatrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
-            durationMatrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
 
-            for (int i = 0; i < citiesCoordinates.Length; i++)
+        public override double[,] Count(string[] citiesCoordinates)
+        {
+            matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
+            string url = "https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
+            fillMatrix(citiesCoordinates,url);
+            return matrix;
+        }
+        public override void fillMatrix(string[] coordinates, string requestUrl)
+        {
+            request = new APIRequest();
+            string url = requestUrl;
+            for (int i = 0; i < coordinates.Length; i++)
             {
-                for(int j = 0; j < citiesCoordinates.Length; j++)
+                for (int j = 0; j < coordinates.Length; j++)
                 {
                     if (i == j)
                     {
-                        distanceMatrix[i, j] = 0;
-                        durationMatrix[i, j] = 0;
+                        matrix[i, j] = 0;
                         continue;
                     };
-                    var durationAndDistance = APIRequest.MakeDefaultRequest(citiesCoordinates[i], citiesCoordinates[j]).Result;
-                    distanceMatrix[i, j] = durationAndDistance.Item1;
-                    durationMatrix[i, j] = durationAndDistance.Item2;
+                    url = requestUrl.Replace("coordinatesFrom", coordinates[i]).Replace("coordinatesTo", coordinates[j]);
+                    double distance = request.MakeDistanceRequestAsync(url).Result;
+                    matrix[i, j] = distance;
                 }
             }
-
-            return (distanceMatrix, durationMatrix);
         }
     }
+
+    class DurationMatrix : Matrix
+    {
+        public override double[,] Count(string[] citiesCoordinates)
+        {
+            matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
+            string url = "https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
+            fillMatrix(citiesCoordinates, url);
+            return matrix;
+        }
+
+        public override void fillMatrix(string[] coordinates, string requestUrl)
+        {
+            request = new APIRequest();
+            string url = requestUrl;
+            for (int i = 0; i < coordinates.Length; i++)
+            {
+                for (int j = 0; j < coordinates.Length; j++)
+                {
+                    if (i == j)
+                    {
+                        matrix[i, j] = 0;
+                        continue;
+                    };
+                    url = requestUrl.Replace("coordinatesFrom", coordinates[i]).Replace("coordinatesTo", coordinates[j]);
+                    double distance = request.MakeDurationRequestAsync(url).Result;
+                    matrix[i, j] = distance;
+                }
+            }
+        }
+    }
+    
     abstract class MatrixCreator
     {
         public abstract Matrix CreateMatrix();
@@ -65,14 +103,19 @@ namespace ConsoleApp2
         public override Matrix CreateMatrix() => new DistanceMatrix();
     }
 
+    class DurationMatrixCreator : MatrixCreator
+    {
+        public override Matrix CreateMatrix() => new DurationMatrix();
+    }
+
     class CoordinateMatrix
     {
         public string[] array;
-        public string[] Count(List<Root> cities)
+        public string[] Count(List<City> cities)
         {
             array = new string[cities.Count];
             int i = 0;
-            foreach (Root city in cities)
+            foreach (City city in cities)
             {
                 Console.WriteLine(city.lat + ',' + city.lng);
                 array[i] = city.lat + ',' + city.lng;

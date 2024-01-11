@@ -6,7 +6,7 @@ namespace ConsoleApp2
 {
     abstract class RouteResponse
     {
-        public abstract string CreateRouteResponse(double[,] distanceMatrix, double[,] durationMatrix, int[] citiesIndexOrderArray, List<Root> cities);
+        public abstract string CreateRouteResponse(double[,] distanceMatrix, double[,] durationMatrix, int[] citiesIndexOrderArray, List<City> cities);
         
     }
 
@@ -14,12 +14,12 @@ namespace ConsoleApp2
     {
         private double[,] distanceMatrix;
         private double[,] durationMatrix;
-        List<Root> cities;
+        List<City> cities;
         int[] citiesIndexOrderArray;
-        public override string CreateRouteResponse(double[,] distanceMatrix, double[,] durationMatrix, int[] citiesIndexOrderArray, List<Root> cities)
+        public override string CreateRouteResponse(double[,] distanceMatrix, double[,] durationMatrix, int[] citiesIndexOrderArray, List<City> cities)
         {
             this.distanceMatrix = distanceMatrix;
-            this.durationMatrix = distanceMatrix;
+            this.durationMatrix = durationMatrix;
             this.cities = cities;
             this.citiesIndexOrderArray = citiesIndexOrderArray;
 
@@ -47,16 +47,11 @@ namespace ConsoleApp2
             {
                 if (i == matrix.GetLength(0) - 1)
                 {
-                    routeStr.Append(cities[citiesIndexOrderArray[i]].name);
+                    routeStr.Append(cities[citiesIndexOrderArray[i]].longName);
                 }
                 else
                 {
-                    routeStr.Append(cities[citiesIndexOrderArray[i]].name + " -> ");
-                }
-
-                if (i == distanceMatrix.GetLength(0) - 1)
-                {
-                    routeStr.Append(" -> " + cities[citiesIndexOrderArray[0]].name);
+                    routeStr.Append(cities[citiesIndexOrderArray[i]].longName + " -> ");
                 }
             }
 
@@ -73,7 +68,6 @@ namespace ConsoleApp2
 
                 if (j == matrix.GetLength(0))
                 {
-                    fullExpenses += matrix[citiesIndexOrderArray[0], citiesIndexOrderArray[i]];
                     break;
                 }
 
@@ -92,11 +86,11 @@ namespace ConsoleApp2
 
                 if (j == distanceMatrix.GetLength(0))
                 {
-                    detailedRoute.Append($"Путь: {cities[citiesIndexOrderArray[i]].name} -> {cities[citiesIndexOrderArray[0]].name} займет {(int)distanceMatrix[citiesIndexOrderArray[0], citiesIndexOrderArray[i]]} км. и {(int)durationMatrix[citiesIndexOrderArray[0], citiesIndexOrderArray[i]]} ч. \n");
+                    detailedRoute.Append($"Путь: {cities[citiesIndexOrderArray[i]].longName} -> {cities[citiesIndexOrderArray[0]].longName} займет {(int)distanceMatrix[citiesIndexOrderArray[0], citiesIndexOrderArray[i]]} км. и {(int)durationMatrix[citiesIndexOrderArray[0], citiesIndexOrderArray[i]]} ч. \n");
                     break;
                 }
 
-                detailedRoute.Append($"Путь: {cities[citiesIndexOrderArray[i]].name} -> {cities[citiesIndexOrderArray[j]].name} займет {(int)distanceMatrix[citiesIndexOrderArray[i], citiesIndexOrderArray[j]]} км. и {(int)durationMatrix[citiesIndexOrderArray[i], citiesIndexOrderArray[j]]} ч. \n");
+                detailedRoute.Append($"Путь: {cities[citiesIndexOrderArray[i]].longName} -> {cities[citiesIndexOrderArray[j]].longName} займет {(int)distanceMatrix[citiesIndexOrderArray[i], citiesIndexOrderArray[j]]} км. и {(int)durationMatrix[citiesIndexOrderArray[i], citiesIndexOrderArray[j]]} ч. \n");
             }
 
             return detailedRoute.ToString();

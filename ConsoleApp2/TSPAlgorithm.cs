@@ -51,7 +51,7 @@ namespace ConsoleApp2
             input_matrix = new double[n, n];
             path = new int[n];
             visited = new bool[n];
-            best_path = new int[n];
+            best_path = new int[n + 1];
             best_len = INF;
 
             for (int i = 0; i < n; i++)
