@@ -6,7 +6,6 @@ namespace ConsoleApp2
 {
     class City
     {
-
         public string longName { get; set; }
 
         public string lat { get; private set; }

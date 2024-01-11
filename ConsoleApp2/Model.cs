@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,21 +26,31 @@ namespace ConsoleApp2
 
             matrixCreator = new DistanceMatrixCreator();
             matrix = matrixCreator.CreateMatrix();
-            double[,] distanceMatrix = matrix.Count(coordinateMatrix.Count(cities));
-            matrixCreator = new DurationMatrixCreator();
-            matrix = matrixCreator.CreateMatrix();
-            double[,] durationMatrix = matrix.Count(coordinateMatrix.Count(cities));
+            try
+            {
+                double[,] distanceMatrix = matrix.Count(coordinateMatrix.Count(cities));
+                if (distanceMatrix.Cast<double>().Contains(-1))
+                {
+                    return "Не удалось найти маршрут между городами, попробуйте ввести другой маршрут ...";
+                }
+                matrixCreator = new DurationMatrixCreator();
+                matrix = matrixCreator.CreateMatrix();
+                double[,] durationMatrix = matrix.Count(coordinateMatrix.Count(cities));
 
-            matrix.PrintMatrix(distanceMatrix, "Матрица расстояний:");
-            matrix.PrintMatrix(durationMatrix, "Матрица времени:");
+                matrix.PrintMatrix(distanceMatrix, "Матрица расстояний:");
+                matrix.PrintMatrix(durationMatrix, "Матрица времени:");
 
-            citiesIndexesRouteOrder = TSP.Start(distanceMatrix);
+                citiesIndexesRouteOrder = TSP.Start(distanceMatrix);
 
-            Console.WriteLine("Результат был получен");
+                Console.WriteLine("Результат был получен");
 
-            routeResponseCreator = new RouteDistanceAndDurationResponseCreator();
-            var routeResponse = routeResponseCreator.CreateRouteResponse();
-            return routeResponse.CreateRouteResponse(distanceMatrix,durationMatrix, citiesIndexesRouteOrder, cities); 
+                routeResponseCreator = new RouteDistanceAndDurationResponseCreator();
+                var routeResponse = routeResponseCreator.CreateRouteResponse();
+                return routeResponse.CreateRouteResponse(distanceMatrix,durationMatrix, citiesIndexesRouteOrder, cities); 
+            }catch(NullReferenceException ex)
+            {
+                Console.WriteLine(ex.Message); return "Не удалось найти маршрут, возможно вы ввели неправильные названия городов или такого маршрута не существует,попробуйте ввсти другой маршрут";
+            }
         }
 
         public string MakeMapLink()

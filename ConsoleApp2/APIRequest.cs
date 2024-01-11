@@ -14,10 +14,6 @@ namespace ConsoleApp2
 {
     internal class APIRequest
     {
-        public string geonamesApiKey { get; set; }
-        string mapApiKey { get; set; }
-        //private static string googleCloudApiKey = $"https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
-        //private static string geonamesUsername = "demo654";
 
         public async Task<bool> MakeCityRequestAsync(string url, List<City> cities)
         {
@@ -27,7 +23,7 @@ namespace ConsoleApp2
 
             if((string)json["status"] == "ZERO_RESULTS")
             {
-                Console.WriteLine($"{cities.Last().longName} не является городом");
+                Console.WriteLine($"Неудалось найти местоположение");
                 return false;
             }
             else
@@ -44,12 +40,21 @@ namespace ConsoleApp2
 
         public async Task<double> MakeDistanceRequestAsync(string url) 
         {
-            JObject jsonResponse = await MakeRequestAsync(url);
-            JToken routes = jsonResponse["routes"];
+            JObject json = await MakeRequestAsync(url);
+            if ((string)json["status"] == "ZERO_RESULTS")
+            {
+                Console.WriteLine($"Неудалось найти местоположение");
+                return -1;
+            }
+            else
+            {
+                JToken routes = json["routes"];
 
-            JToken fullRouteLegs = routes[0]["legs"];
-            double distance = (double)fullRouteLegs[0]["distance"]["value"] / 1000;
-            return distance;        
+                JToken fullRouteLegs = routes[0]["legs"];
+                double distance = (double)fullRouteLegs[0]["distance"]["value"] / 1000;
+                return distance;
+            }
+                    
         }
 
         public async Task<double> MakeDurationRequestAsync(string url)

@@ -33,7 +33,6 @@ namespace ConsoleApp2
 
     class DistanceMatrix : Matrix
     {
-
         public override double[,] Count(string[] citiesCoordinates)
         {
             matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
@@ -117,7 +116,6 @@ namespace ConsoleApp2
             int i = 0;
             foreach (City city in cities)
             {
-                Console.WriteLine(city.lat + ',' + city.lng);
                 array[i] = city.lat + ',' + city.lng;
                 ++i;
             }

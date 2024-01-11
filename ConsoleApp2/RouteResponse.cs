@@ -43,9 +43,9 @@ namespace ConsoleApp2
 
             routeStr.Append("Маршрут: ");
 
-            for (int i = 0; i < matrix.GetLength(0); i++)
+            for (int i = 0; i < citiesIndexOrderArray.Length; i++)
             {
-                if (i == matrix.GetLength(0) - 1)
+                if (i == citiesIndexOrderArray.Length - 1)
                 {
                     routeStr.Append(cities[citiesIndexOrderArray[i]].longName);
                 }
@@ -62,11 +62,11 @@ namespace ConsoleApp2
         {
             int j = 0;
             double fullExpenses = 0;
-            for (int i = 0; i < matrix.GetLength(0); i++)
+            for (int i = 0; i < citiesIndexOrderArray.Length; i++)
             {
                 j = i + 1;
 
-                if (j == matrix.GetLength(0))
+                if (j == citiesIndexOrderArray.Length)
                 {
                     break;
                 }
