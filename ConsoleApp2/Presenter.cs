@@ -1,22 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using Newtonsoft.Json.Linq;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Exceptions;
 using System.Text;
-using Newtonsoft.Json;
 using static System.Net.WebRequestMethods;
-using System.Linq;
-using Telegram.Bot.Requests.Abstractions;
-using System.Net;
-using System.Xml.Linq;
+using System.IO;
+using System.Net.Http;
 
 namespace ConsoleApp2
 {
@@ -29,7 +24,8 @@ namespace ConsoleApp2
         private static bool InputCities = false;
         private static bool InlineKeyaboard = false;
         private static bool InputFromGeomap = false;
-        private static List<City> CITIES;
+        private static bool settingsRouteMode = false;
+        private static StringBuilder settingUrl = new StringBuilder("https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho");
 
         static async Task Main()
         {
@@ -41,7 +37,8 @@ namespace ConsoleApp2
                 {
                     UpdateType.Message, 
                     UpdateType.CallbackQuery,
-                    UpdateType.InlineQuery
+                    UpdateType.InlineQuery,
+                    UpdateType.PollAnswer
                 },
                 ThrowPendingUpdates = true,
             };
@@ -85,26 +82,8 @@ namespace ConsoleApp2
 
                                     if (message.Text == "/start")
                                     {
-                                            var inlineKeyboard = new InlineKeyboardMarkup(
-                                                new List<InlineKeyboardButton[]>()
-                                                {
-                                                    new InlineKeyboardButton[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("С помощью клавиатуры", "button1"),
-                                                    },
-                                                    new InlineKeyboardButton[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("С помощью навигационной карты", "button2"),
-                                                    },
-                                                }
-                                            );
-
-                                        await botClient.SendTextMessageAsync(
-                                            chat.Id,
-                                            "Выбери вариант ввода названий городов:",
-                                            replyMarkup:inlineKeyboard);
-                                        CITIES = new List<City>();
-
+                                        await botClient.SendTextMessageAsync(chat.Id, "Введите названия городов через пробел ...");
+                                        InputCities = true;
                                         return;
                                     }
 
@@ -129,68 +108,54 @@ namespace ConsoleApp2
                                             "Происходит нахождение самого короткого маршрута, пожалуйста подождите ..."
                                         );
 
+                                        model.url = "https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
                                         string resultRouteInfo = await model.FindShortestRouteAsync();
-                                        if(!resultRouteInfo.Contains("Не удалось найти маршрут"))
-                                        {
-                                            var inlineKeyboard = new InlineKeyboardMarkup(
-                                                new List<InlineKeyboardButton[]>()
-                                                {
-                                                    new InlineKeyboardButton[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("Получить Google карту", "button3"),
-                                                    },
-                                                    new InlineKeyboardButton[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("Сохранить маршрут", "button4"),
-                                                    },
-                                                    new InlineKeyboardButton[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("Найти новый маршрут", "button5"),
-                                                    },
-                                                }
-                                            );
 
-                                            await botClient.SendTextMessageAsync(
-                                                chat.Id,
-                                                resultRouteInfo,
-                                                replyMarkup: inlineKeyboard
-                                            );
-                                        }
-                                        else
+                                        if (!resultRouteInfo.Contains("Не удалось найти маршрут"))
                                         {
-                                            var inlineKeyboard = new InlineKeyboardMarkup(
+                                        var inlineKeyboard = new InlineKeyboardMarkup(
                                             new List<InlineKeyboardButton[]>()
                                             {
                                                 new InlineKeyboardButton[]
                                                 {
-                                                    InlineKeyboardButton.WithCallbackData("Найти новый маршрут", "button3"),
+                                                    InlineKeyboardButton.WithCallbackData("Получить Google карту", "button1"),
                                                 },
-                                            });
+                                            }
+                                        );
+
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            resultRouteInfo,
+                                            replyMarkup: inlineKeyboard
+                                        );
+                                        }
+                                        else
+                                        {
                                             await botClient.SendTextMessageAsync(
                                                 chat.Id,
-                                                resultRouteInfo,
-                                                replyMarkup: inlineKeyboard
+                                                resultRouteInfo
                                             );
                                         }
-
-
                                     }
 
                                     if (message.Text == "Настраиваемый маршрут")
                                     {
                                         InlineKeyaboard = false;
-                                        Console.WriteLine("Вычисляется самый короткий маршрут ...");
+                                        settingsRouteMode = true;
+                                        Console.WriteLine("Вычисляется Настраиваемый маршрут ...");
+                                    }
 
-                                        await botClient.SendTextMessageAsync(
-                                            chat.Id,
-                                            "Происходит нахождение самого короткого маршрута, пожалуйста подождите ..."
-                                        );
+                                    if (settingsRouteMode)
+                                    {
+                                        settingsRouteMode = false;
 
-                                        string resultRouteInfo = await model.FindShortestRouteAsync();
-
-                                        await botClient.SendTextMessageAsync(
-                                            chat.Id,
-                                            resultRouteInfo
+                                        var pollMessage = await botClient.SendPollAsync(
+                                            chatId: message.Chat,
+                                            question: "Какой режим передвижения предпочитаете ?",
+                                            options: new[] { "driving", "walking", "bicycling", "transit" },
+                                            isAnonymous: false,
+                                            allowsMultipleAnswers: false,
+                                            replyMarkup: null
                                         );
                                     }
 
@@ -246,10 +211,6 @@ namespace ConsoleApp2
                                                 {
                                                     new KeyboardButton("Самый короткий маршрут")
                                                 },
-                                                new KeyboardButton[]
-                                                {
-                                                    new KeyboardButton("Настраиваемый маршрут")
-                                                }
                                             })
                                             {
                                                 ResizeKeyboard = true,
@@ -264,33 +225,6 @@ namespace ConsoleApp2
                                         }
                                     }
 
-                                    if (InputFromGeomap)
-                                    {
-                                        await botClient.SendTextMessageAsync(
-                                            chat.Id,
-                                            "Местоположение с помощью гео карты получено !"
-                                        );
-                                    }
-
-                                    break;
-                                }
-                            case MessageType.Location:
-                                {
-                                    var location = message.Location;
-                                    string latitude = Convert.ToString(location.Latitude);
-                                    string longitude = Convert.ToString(location.Longitude);
-                                    Console.WriteLine(latitude + ":" + longitude);
-                                        
-                                    string requestUri = string.Format("https://maps.googleapis.com/maps/api/geocode/xml?latlng={0},{1}&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho", latitude, longitude);
-
-                                    WebRequest request = WebRequest.Create(requestUri);
-                                    WebResponse response = request.GetResponse();
-                                    XDocument xdoc = XDocument.Load(response.GetResponseStream());
-
-                                    XElement result = xdoc.Element("GeocodeResponse").Element("result");
-                                    string address = result.Element("formatted_address").Value;
-
-                                    Console.WriteLine("Address: {0}", address);
                                     break;
                                 }
                             default:
@@ -305,7 +239,6 @@ namespace ConsoleApp2
                         break;
 
                     }// case (UpdateType.Message)
-
                     case UpdateType.CallbackQuery:
                         {
                             var callbackQuery = update.CallbackQuery;
@@ -318,23 +251,8 @@ namespace ConsoleApp2
 
                             switch (callbackQuery.Data)
                             {
+                                
                                 case "button1":
-                                {
-                                    botClient.SendTextMessageAsync(chat.Id, "Введите названия городов через пробел ...");
-                                    InputCities = true;
-                                    return;
-                                }
-                                case "button2":
-                                {
-                                    botClient.SendTextMessageAsync(chat.Id, "Введите названия городов с помощью гео карты:" + "\n" + "1. Нажмите на скрепку в правом нижнем углу" +
-                                        "\n" + "2. Нажмите на кнопку location" + "\n" + "3. Поставьте метку на карте и нажмите на кнопку Send selected location" + "\n" +
-                                        "Проделайте шаги выше минимум 3 раза для нахождения маршрута" + "\n" + "ЕСЛИ ВЫ ИСПОЛЬЗУЕТЕ TELEGRAM WEB ВЫ НЕ СМОЖЕТЕ УКАЗАТЬ МЕТКУ !");
-                                    InputFromGeomap = true;
-                                    await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
-
-                                    return;
-                                }
-                                case "button3":
                                 {
                                     await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
 
@@ -348,23 +266,75 @@ namespace ConsoleApp2
 
                                     return; 
                                 }
-                                case "button4":
-                                {
-                                    await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "Тут может быть ваш текст!");
-
-                                    await botClient.SendTextMessageAsync(
-                                        chat.Id,
-                                        $"Вы нажали на {callbackQuery.Data}");
-
-                                    model.cities.Clear();
-
-                                    return;
-                                }
-
                             }
 
                             return;
                         }
+                    case UpdateType.PollAnswer:
+                    {
+                        var pollOptions = update.PollAnswer.OptionIds;
+                        switch (pollOptions[0])
+                            {
+                                case 0:
+                                    {
+                                        settingUrl.Append("&mode=driving");
+                                        break;
+                                    }
+                                case 1:
+                                    {
+                                        settingUrl.Append("&mode=walking");
+                                        break;
+                                    }
+                                case 2:
+                                    {
+                                        settingUrl.Append("&mode=bicycling");
+                                        break;
+                                    }
+                                case 3:
+                                {
+                                        settingUrl.Append("&mode=transit");
+                                        break;
+                                }
+                            }
+
+
+                    //await botClient.SendTextMessageAsync(
+                    //    update.Message.Chat.Id,
+                    //    "Происходит нахождение Настраиваемый маршрута, пожалуйста подождите ..."
+                    //);
+
+                            model.url = settingUrl.ToString();
+                    string resultRouteInfo = await model.FindShortestRouteAsync();
+
+                    if (!resultRouteInfo.Contains("Не удалось найти маршрут"))
+                    {
+                        var inlineKeyboard = new InlineKeyboardMarkup(
+                            new List<InlineKeyboardButton[]>()
+                            {
+                                new InlineKeyboardButton[]
+                                {
+                                    InlineKeyboardButton.WithCallbackData("Получить Google карту", "button1"),
+                                },
+                            }
+                        );
+
+                        await botClient.SendTextMessageAsync(
+                            update.Message.Chat.Id,
+                            resultRouteInfo,
+                            replyMarkup: inlineKeyboard
+                        );
+                    }
+                    else
+                    {
+                        await botClient.SendTextMessageAsync(
+                            update.Message.Chat.Id,
+                            resultRouteInfo
+                        );
+                    }
+
+                    return;
+
+                    }
                 }
             }catch (Exception ex)
             {

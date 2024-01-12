@@ -11,6 +11,8 @@ namespace ConsoleApp2
 {
     abstract class Matrix
     {
+        public string url { get; set; }
+
         public double[,] matrix { get; protected set; }
         public APIRequest request { get; protected set; }
         public abstract double[,] Count(string[] citiesCoordinates);
@@ -36,7 +38,6 @@ namespace ConsoleApp2
         public override double[,] Count(string[] citiesCoordinates)
         {
             matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
-            string url = "https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
             fillMatrix(citiesCoordinates,url);
             return matrix;
         }
@@ -66,7 +67,6 @@ namespace ConsoleApp2
         public override double[,] Count(string[] citiesCoordinates)
         {
             matrix = new double[citiesCoordinates.Count(), citiesCoordinates.Count()];
-            string url = "https://maps.googleapis.com/maps/api/directions/json?origin=coordinatesFrom&destination=coordinatesTo&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho";
             fillMatrix(citiesCoordinates, url);
             return matrix;
         }

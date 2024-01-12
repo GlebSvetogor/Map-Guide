@@ -32,6 +32,7 @@ namespace ConsoleApp2
             string url = googleMapsUrl.Replace("wayPointsCoordinates", waypoints.ToString());
             return url;
         }
+
     }
 
     abstract class MapLinkCreator

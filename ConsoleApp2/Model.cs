@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
+using static System.Net.WebRequestMethods;
 
 namespace ConsoleApp2
 {
@@ -17,6 +18,7 @@ namespace ConsoleApp2
         private RouteResponseCreator routeResponseCreator;
         private Matrix matrix;
         public int[] citiesIndexesRouteOrder;
+        public string url;
 
         public Model() { }
 
@@ -26,6 +28,7 @@ namespace ConsoleApp2
 
             matrixCreator = new DistanceMatrixCreator();
             matrix = matrixCreator.CreateMatrix();
+            matrix.url = url;
             try
             {
                 double[,] distanceMatrix = matrix.Count(coordinateMatrix.Count(cities));
@@ -35,6 +38,7 @@ namespace ConsoleApp2
                 }
                 matrixCreator = new DurationMatrixCreator();
                 matrix = matrixCreator.CreateMatrix();
+                matrix.url = url;
                 double[,] durationMatrix = matrix.Count(coordinateMatrix.Count(cities));
 
                 matrix.PrintMatrix(distanceMatrix, "Матрица расстояний:");
