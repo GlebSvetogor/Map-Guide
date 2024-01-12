@@ -14,7 +14,6 @@ namespace ConsoleApp2
 {
     internal class APIRequest
     {
-
         public async Task<bool> MakeCityRequestAsync(string url, List<City> cities)
         {
             StringBuilder notCities = new StringBuilder();

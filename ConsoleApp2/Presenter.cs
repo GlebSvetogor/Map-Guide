@@ -15,6 +15,8 @@ using Newtonsoft.Json;
 using static System.Net.WebRequestMethods;
 using System.Linq;
 using Telegram.Bot.Requests.Abstractions;
+using System.Net;
+using System.Xml.Linq;
 
 namespace ConsoleApp2
 {
@@ -26,6 +28,8 @@ namespace ConsoleApp2
         public static APIRequest request;
         private static bool InputCities = false;
         private static bool InlineKeyaboard = false;
+        private static bool InputFromGeomap = false;
+        private static List<City> CITIES;
 
         static async Task Main()
         {
@@ -67,7 +71,9 @@ namespace ConsoleApp2
                 {
                     case UpdateType.Message:
                     {
+                            
                         var message = update.Message;
+
                         var user = message.From;
 
                         var chat = message.Chat;
@@ -76,12 +82,6 @@ namespace ConsoleApp2
                         {
                             case MessageType.Text:
                                 {
-                                    if(message.Text == "/test")
-                                        {
-                                            Test t = new Test();
-                                            var r = t.GetRandomCityName();
-                                            Console.WriteLine(r);
-                                        }
 
                                     if (message.Text == "/start")
                                     {
@@ -90,24 +90,20 @@ namespace ConsoleApp2
                                                 {
                                                     new InlineKeyboardButton[]
                                                     {
-                                                        InlineKeyboardButton.WithCallbackData("Ручной ввод", "button1"),
-                                                        InlineKeyboardButton.WithCallbackData("Рандомный ввод", "button2"),
+                                                        InlineKeyboardButton.WithCallbackData("С помощью клавиатуры", "button1"),
                                                     },
                                                     new InlineKeyboardButton[]
                                                     {
-                                                        InlineKeyboardButton.WithCallbackData("Популярные маршруты", "button3"),
-                                                    },
-                                                    new InlineKeyboardButton[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("С помощью навигационной карты", "button4"),
+                                                        InlineKeyboardButton.WithCallbackData("С помощью навигационной карты", "button2"),
                                                     },
                                                 }
                                             );
 
                                         await botClient.SendTextMessageAsync(
                                             chat.Id,
-                                            "Выбери вариант ввода названий городов",
+                                            "Выбери вариант ввода названий городов:",
                                             replyMarkup:inlineKeyboard);
+                                        CITIES = new List<City>();
 
                                         return;
                                     }
@@ -141,15 +137,15 @@ namespace ConsoleApp2
                                                 {
                                                     new InlineKeyboardButton[]
                                                     {
-                                                        InlineKeyboardButton.WithCallbackData("Получить Google карту", "button5"),
+                                                        InlineKeyboardButton.WithCallbackData("Получить Google карту", "button3"),
                                                     },
                                                     new InlineKeyboardButton[]
                                                     {
-                                                        InlineKeyboardButton.WithCallbackData("Сохранить маршрут", "button6"),
+                                                        InlineKeyboardButton.WithCallbackData("Сохранить маршрут", "button4"),
                                                     },
                                                     new InlineKeyboardButton[]
                                                     {
-                                                        InlineKeyboardButton.WithCallbackData("Найти новый маршрут", "button7"),
+                                                        InlineKeyboardButton.WithCallbackData("Найти новый маршрут", "button5"),
                                                     },
                                                 }
                                             );
@@ -268,6 +264,33 @@ namespace ConsoleApp2
                                         }
                                     }
 
+                                    if (InputFromGeomap)
+                                    {
+                                        await botClient.SendTextMessageAsync(
+                                            chat.Id,
+                                            "Местоположение с помощью гео карты получено !"
+                                        );
+                                    }
+
+                                    break;
+                                }
+                            case MessageType.Location:
+                                {
+                                    var location = message.Location;
+                                    string latitude = Convert.ToString(location.Latitude);
+                                    string longitude = Convert.ToString(location.Longitude);
+                                    Console.WriteLine(latitude + ":" + longitude);
+                                        
+                                    string requestUri = string.Format("https://maps.googleapis.com/maps/api/geocode/xml?latlng={0},{1}&key=AIzaSyBGykNf1-zcVrXeSSkuYqRc01Gc02nh0Ho", latitude, longitude);
+
+                                    WebRequest request = WebRequest.Create(requestUri);
+                                    WebResponse response = request.GetResponse();
+                                    XDocument xdoc = XDocument.Load(response.GetResponseStream());
+
+                                    XElement result = xdoc.Element("GeocodeResponse").Element("result");
+                                    string address = result.Element("formatted_address").Value;
+
+                                    Console.WriteLine("Address: {0}", address);
                                     break;
                                 }
                             default:
@@ -297,23 +320,21 @@ namespace ConsoleApp2
                             {
                                 case "button1":
                                 {
-                                    botClient.SendTextMessageAsync(chat.Id, "Введите названия городов через пробел");
+                                    botClient.SendTextMessageAsync(chat.Id, "Введите названия городов через пробел ...");
                                     InputCities = true;
                                     return;
                                 }
                                 case "button2":
                                 {
+                                    botClient.SendTextMessageAsync(chat.Id, "Введите названия городов с помощью гео карты:" + "\n" + "1. Нажмите на скрепку в правом нижнем углу" +
+                                        "\n" + "2. Нажмите на кнопку location" + "\n" + "3. Поставьте метку на карте и нажмите на кнопку Send selected location" + "\n" +
+                                        "Проделайте шаги выше минимум 3 раза для нахождения маршрута" + "\n" + "ЕСЛИ ВЫ ИСПОЛЬЗУЕТЕ TELEGRAM WEB ВЫ НЕ СМОЖЕТЕ УКАЗАТЬ МЕТКУ !");
+                                    InputFromGeomap = true;
+                                    await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
+
                                     return;
                                 }
                                 case "button3":
-                                {
-                                    return;
-                                }
-                                case "button4":
-                                {
-                                    return;
-                                }
-                                case "button5":
                                 {
                                     await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
 
@@ -325,9 +346,9 @@ namespace ConsoleApp2
 
                                     model.cities.Clear();
 
-                                    return;
+                                    return; 
                                 }
-                                case "button6":
+                                case "button4":
                                 {
                                     await botClient.AnswerCallbackQueryAsync(callbackQuery.Id, "Тут может быть ваш текст!");
 
@@ -337,14 +358,6 @@ namespace ConsoleApp2
 
                                     model.cities.Clear();
 
-                                    return;
-                                }
-                                case "button7":
-                                {
-
-                                    Message message = update.Message;
-
-                                    await botClient.AnswerCallbackQueryAsync(callbackQuery.Id);
                                     return;
                                 }
 
@@ -399,23 +412,17 @@ namespace ConsoleApp2
                 string validatorResponse = notCities.ToString();
                 return (validatorResponse, false);
             }
-            
         }
+        
     }
-    class Test
+    public class LocationData
     {
-        private static readonly HttpClient client = new HttpClient();
+        public AddressData Address { get; set; }
+    }
 
-        public async Task<string> GetRandomCityName()
-        {
-            string url = "https://api.teleport.org/api/cities/?limit=1&offset=" + new Random().Next(0, 1000000);
-            Console.WriteLine(url);
-            HttpResponseMessage response = await client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-            string responseBody = await response.Content.ReadAsStringAsync();
-            dynamic data = JsonConvert.DeserializeObject(responseBody);
-            return data._embedded["city:search-results"][0]._embedded["city:item"].name;
-        }
+    public class AddressData
+    {
+        public string City { get; set; }
     }
 }
         
